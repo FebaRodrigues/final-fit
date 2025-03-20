@@ -16,58 +16,7 @@ const { auth } = require('../middleware/auth');
 const OTP = require('../models/OTP');
 const router = express.Router();
 
-// Debug route with enhanced OTP information
-router.get('/debug-session', auth(['user']), async (req, res) => {
-  try {
-    const userId = req.user.id;
-    
-    // Get OTPs from database for this user
-    let dbOtps = [];
-    try {
-      dbOtps = await OTP.find({ 
-        userId,
-        isUsed: false,
-        expires: { $gt: new Date() }
-      }).select('code expires purpose createdAt');
-    } catch (err) {
-      console.error('Error fetching OTPs from database:', err);
-    }
-    
-    // Return session information
-    const sessionInfo = {
-      hasSession: !!req.session,
-      sessionID: req.session?.id || 'none',
-      hasOTP: !!(req.session && req.session.otp),
-      otpData: req.session?.otp ? {
-        exists: true,
-        userId: req.session.otp.userId,
-        expiresAt: req.session.otp.expires,
-        codeLength: req.session.otp.code?.length || 0
-      } : 'No OTP data',
-      dbOtps: dbOtps.length > 0 ? {
-        count: dbOtps.length,
-        otps: dbOtps.map(otp => ({
-          id: otp._id,
-          purpose: otp.purpose,
-          expiresAt: otp.expires,
-          createdAt: otp.createdAt
-        }))
-      } : 'No valid OTPs in database'
-    };
-    
-    console.log('Debug session info:', sessionInfo);
-    
-    return res.status(200).json({
-      message: 'Session debug information',
-      session: sessionInfo
-    });
-  } catch (error) {
-    console.error('Error in debug session route:', error);
-    return res.status(500).json({ message: 'Error retrieving session information' });
-  }
-});
-
-// Add a public debug endpoint without auth requirement
+// Add a public debug endpoint without auth requirement - placed at the top for priority
 router.get('/public-debug', async (req, res) => {
   try {
     // Get database health info
@@ -127,6 +76,57 @@ router.get('/public-debug', async (req, res) => {
       message: 'Error retrieving debug information',
       error: error.message
     });
+  }
+});
+
+// Debug route with enhanced OTP information
+router.get('/debug-session', auth(['user']), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get OTPs from database for this user
+    let dbOtps = [];
+    try {
+      dbOtps = await OTP.find({ 
+        userId,
+        isUsed: false,
+        expires: { $gt: new Date() }
+      }).select('code expires purpose createdAt');
+    } catch (err) {
+      console.error('Error fetching OTPs from database:', err);
+    }
+    
+    // Return session information
+    const sessionInfo = {
+      hasSession: !!req.session,
+      sessionID: req.session?.id || 'none',
+      hasOTP: !!(req.session && req.session.otp),
+      otpData: req.session?.otp ? {
+        exists: true,
+        userId: req.session.otp.userId,
+        expiresAt: req.session.otp.expires,
+        codeLength: req.session.otp.code?.length || 0
+      } : 'No OTP data',
+      dbOtps: dbOtps.length > 0 ? {
+        count: dbOtps.length,
+        otps: dbOtps.map(otp => ({
+          id: otp._id,
+          purpose: otp.purpose,
+          expiresAt: otp.expires,
+          createdAt: otp.createdAt
+        }))
+      } : 'No valid OTPs in database'
+    };
+    
+    console.log('Debug session info:', sessionInfo);
+    
+    return res.status(200).json({
+      message: 'Session debug information',
+      session: sessionInfo
+    });
+  } catch (error) {
+    console.error('Error in debug session route:', error);
+    return res.status(500).json({ message: 'Error retrieving session information' });
   }
 });
 

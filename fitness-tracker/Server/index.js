@@ -6,6 +6,8 @@ const session = require('express-session');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+const connectDB = require('./config/db');
+const MongoStore = require('connect-mongo');
 
 // Load environment variables
 console.log('=== Loading Environment Variables ===');
@@ -28,8 +30,19 @@ if (!ENV.MONGO_URI) {
 }
 
 // Connect to MongoDB
-const connectDB = require('./config/db');
 connectDB();
+
+// Initialize MongoStore for session storage
+const store = MongoStore.create({
+  mongoUrl: ENV.MONGO_URI,
+  ttl: 60 * 60, // 1 hour session timeout
+  autoRemove: 'native', // Use MongoDB's TTL index
+  touchAfter: 24 * 3600, // Only update the session once per day unless data changes
+  crypto: {
+    secret: ENV.SESSION_SECRET // Encrypt session data
+  },
+  collectionName: 'sessions' // Specify collection name
+});
 
 // Initialize Stripe with the secret key
 let stripe;
@@ -100,10 +113,12 @@ app.use(session({
   secret: ENV.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: store,
   cookie: {
     secure: ENV.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax'
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours in milliseconds
   }
 }));
 
@@ -228,5 +243,4 @@ if (require.main === module) {
 }
 
 // Export for Vercel
-module.exports = app;
 module.exports = app;

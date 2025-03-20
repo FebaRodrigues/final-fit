@@ -13,11 +13,26 @@ const {
   createPendingPayment
 } = require('../controllers/paymentController');
 const { auth } = require('../middleware/auth');
+const OTP = require('../models/OTP');
 const router = express.Router();
 
-// Add this route before other routes
-router.get('/debug-session', auth(['user']), (req, res) => {
+// Debug route with enhanced OTP information
+router.get('/debug-session', auth(['user']), async (req, res) => {
   try {
+    const userId = req.user.id;
+    
+    // Get OTPs from database for this user
+    let dbOtps = [];
+    try {
+      dbOtps = await OTP.find({ 
+        userId,
+        isUsed: false,
+        expires: { $gt: new Date() }
+      }).select('code expires purpose createdAt');
+    } catch (err) {
+      console.error('Error fetching OTPs from database:', err);
+    }
+    
     // Return session information
     const sessionInfo = {
       hasSession: !!req.session,
@@ -28,7 +43,16 @@ router.get('/debug-session', auth(['user']), (req, res) => {
         userId: req.session.otp.userId,
         expiresAt: req.session.otp.expires,
         codeLength: req.session.otp.code?.length || 0
-      } : 'No OTP data'
+      } : 'No OTP data',
+      dbOtps: dbOtps.length > 0 ? {
+        count: dbOtps.length,
+        otps: dbOtps.map(otp => ({
+          id: otp._id,
+          purpose: otp.purpose,
+          expiresAt: otp.expires,
+          createdAt: otp.createdAt
+        }))
+      } : 'No valid OTPs in database'
     };
     
     console.log('Debug session info:', sessionInfo);

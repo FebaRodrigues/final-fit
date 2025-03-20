@@ -11,7 +11,7 @@
       "src": "/api/(.*)",
       "dest": "/index.js",
       "headers": {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
         "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept, Authorization",
         "Access-Control-Allow-Credentials": "true"
@@ -26,7 +26,7 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Origin", "value": "https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH" },
         { "key": "Access-Control-Allow-Headers", "value": "X-Requested-With, Content-Type, Accept, Authorization" },
         { "key": "Access-Control-Allow-Credentials", "value": "true" }

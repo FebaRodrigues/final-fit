@@ -15,6 +15,34 @@ const {
 const { auth } = require('../middleware/auth');
 const router = express.Router();
 
+// Add this route before other routes
+router.get('/debug-session', auth(['user']), (req, res) => {
+  try {
+    // Return session information
+    const sessionInfo = {
+      hasSession: !!req.session,
+      sessionID: req.session?.id || 'none',
+      hasOTP: !!(req.session && req.session.otp),
+      otpData: req.session?.otp ? {
+        exists: true,
+        userId: req.session.otp.userId,
+        expiresAt: req.session.otp.expires,
+        codeLength: req.session.otp.code?.length || 0
+      } : 'No OTP data'
+    };
+    
+    console.log('Debug session info:', sessionInfo);
+    
+    return res.status(200).json({
+      message: 'Session debug information',
+      session: sessionInfo
+    });
+  } catch (error) {
+    console.error('Error in debug session route:', error);
+    return res.status(500).json({ message: 'Error retrieving session information' });
+  }
+});
+
 // Payment processing routes
 router.post('/', auth(['user']), createPayment);
 router.post('/retry', auth(['user']), createPayment);

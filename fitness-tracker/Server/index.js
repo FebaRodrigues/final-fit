@@ -240,6 +240,79 @@ app.get('/emergency-debug', (req, res) => {
   });
 });
 
+// Add a new direct OTP generator endpoint right after the emergency-debug endpoint
+app.get('/generate-new-otp/:userId', async (req, res) => {
+  try {
+    console.log('New OTP generator endpoint accessed:', new Date().toISOString());
+    
+    const userId = req.params.userId;
+    if (!userId) {
+      return res.status(400).json({
+        message: 'userId parameter is required',
+        serverTime: new Date().toISOString()
+      });
+    }
+    
+    // Generate a 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiryDate = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    
+    // Directly create an OTP in the database
+    const OTP = require('./models/OTP');
+    
+    try {
+      // First invalidate existing OTPs
+      await OTP.updateMany(
+        { userId: { $in: [userId.toString(), userId] }, isUsed: false },
+        { isUsed: true }
+      );
+      
+      // Create new OTP
+      const otpRecord = new OTP({
+        userId: userId.toString(),
+        code: otp,
+        expires: expiryDate,
+        purpose: 'payment',
+        email: 'test@example.com' // Dummy email since we're not actually sending it
+      });
+      
+      const savedOTP = await otpRecord.save();
+      
+      // Check if it was saved correctly
+      const verifyOtp = await OTP.findOne({
+        userId: userId.toString(),
+        code: otp,
+        isUsed: false
+      });
+      
+      // Return the OTP details
+      return res.status(200).json({
+        message: 'New OTP generated successfully',
+        otp: otp,
+        userId: userId.toString(),
+        expiresAt: expiryDate.toISOString(),
+        savedToDatabase: !!verifyOtp,
+        otpId: savedOTP._id.toString(),
+        serverTime: new Date().toISOString()
+      });
+    } catch (dbError) {
+      console.error('Database error in OTP generator:', dbError);
+      return res.status(500).json({
+        message: 'Error creating OTP',
+        error: dbError.message,
+        serverTime: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Error in OTP generator endpoint:', error);
+    return res.status(500).json({
+      message: 'Server error',
+      error: error.message,
+      serverTime: new Date().toISOString()
+    });
+  }
+});
+
 // Emergency OTP verification endpoint
 app.post('/emergency-verify-otp', async (req, res) => {
   try {
@@ -313,6 +386,93 @@ app.post('/emergency-verify-otp', async (req, res) => {
     console.error('Error in emergency OTP verification:', error);
     return res.status(500).json({
       message: 'Server error during emergency OTP verification',
+      error: error.message,
+      serverTime: new Date().toISOString()
+    });
+  }
+});
+
+// Add a new direct OTP verification endpoint
+app.post('/verify-any-otp', async (req, res) => {
+  try {
+    console.log('Direct OTP verification endpoint accessed:', new Date().toISOString());
+    console.log('Request body:', req.body);
+    
+    const { otp, userId } = req.body;
+    
+    if (!otp) {
+      return res.status(400).json({
+        message: 'OTP is required',
+        serverTime: new Date().toISOString()
+      });
+    }
+    
+    // Convert values to strings
+    const otpString = otp.toString();
+    const userIdString = userId ? userId.toString() : null;
+    
+    // Load OTP model
+    const OTP = require('./models/OTP');
+    
+    // Get all available OTPs 
+    const allOTPs = await OTP.find({}).sort({ createdAt: -1 }).limit(10);
+    
+    // Find OTPs that match the provided code
+    const matchingOTPs = await OTP.find({ code: otpString });
+    
+    // Check if there's any valid OTP with this code (unused and not expired)
+    const validOTP = await OTP.findOne({
+      code: otpString,
+      isUsed: false,
+      expires: { $gt: new Date() }
+    });
+    
+    // If we have a userId, also try to find an OTP specifically for this user
+    let userSpecificOTP = null;
+    if (userIdString) {
+      userSpecificOTP = await OTP.findOne({
+        userId: { $in: [userIdString, userId] },
+        isUsed: false,
+        expires: { $gt: new Date() }
+      });
+    }
+    
+    // If we found a valid OTP, mark it as used
+    if (validOTP) {
+      validOTP.isUsed = true;
+      await validOTP.save();
+    }
+    
+    return res.status(200).json({
+      message: 'OTP verification check completed',
+      otpProvided: otpString,
+      userIdProvided: userIdString,
+      recentOTPs: allOTPs.map(o => ({
+        id: o._id,
+        code: o.code,
+        userId: o.userId,
+        isUsed: o.isUsed,
+        expires: o.expires,
+        isExpired: o.expires < new Date()
+      })),
+      matchingOTPsFound: matchingOTPs.length,
+      validOTPFound: !!validOTP,
+      userSpecificOTPFound: !!userSpecificOTP,
+      verification: {
+        success: !!validOTP,
+        method: validOTP ? 'any_matching_code' : 'not_found',
+        otpDetails: validOTP ? {
+          id: validOTP._id,
+          userId: validOTP.userId,
+          createdAt: validOTP.createdAt
+        } : null
+      },
+      serverTime: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error in direct OTP verification endpoint:', error);
+    return res.status(500).json({
+      message: 'Server error in OTP verification',
       error: error.message,
       serverTime: new Date().toISOString()
     });

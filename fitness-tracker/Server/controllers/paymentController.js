@@ -152,14 +152,14 @@ const sendPaymentOTP = async (req, res) => {
     try {
       // First, invalidate any existing OTPs for this user
       const invalidateResult = await OTP.updateMany(
-        { userId, isUsed: false },
+        { userId: { $in: [userId.toString(), userId] }, isUsed: false },
         { isUsed: true }
       );
       console.log('Invalidated existing OTPs:', invalidateResult);
       
       // Create new OTP record with string versions of userId and OTP code
       const otpRecord = new OTP({
-        userId: userId.toString(),
+        userId: userId.toString(), // Explicitly use string format
         code: otp.toString(),
         expires: expiryDate,
         purpose: 'payment',
@@ -172,11 +172,18 @@ const sendPaymentOTP = async (req, res) => {
       console.log('OTP saved to database:', savedOTP._id);
       
       // Verify the OTP was saved correctly by looking it up
-      const verifyOtp = await OTP.findById(savedOTP._id);
+      const verifyOtp = await OTP.findOne({ 
+        userId: userId.toString(),
+        code: otp.toString(),
+        isUsed: false 
+      });
+      
       console.log('OTP verification lookup result:', verifyOtp ? {
         id: verifyOtp._id,
         code: verifyOtp.code,
-        userId: verifyOtp.userId
+        userId: verifyOtp.userId,
+        expires: verifyOtp.expires,
+        isExpired: verifyOtp.expires < new Date() 
       } : 'Not found');
     } catch (dbError) {
       console.error('Failed to save OTP to database:', dbError);

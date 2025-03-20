@@ -1,0 +1,516 @@
+/* Remove spinner arrows from number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield; /* Firefox */
+}
+
+.trainer-navbar {
+    background-color: #000000;
+    color: white;
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: none;
+    transition: background-color 0.3s ease;
+}
+
+/* Add a background when scrolling */
+.trainer-navbar.scrolled {
+    background-color: #000000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.trainer-navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.trainer-navbar .logo a {
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    position: relative;
+    display: inline-block;
+    padding: 0.25rem 0;
+    transition: transform 0.2s ease;
+}
+
+/* Logo styles now using common TracFitLogo.css */
+/* Removed conflicting styles for .track-part and .fit-part */
+
+.trainer-navbar .logo a:hover {
+    transform: translateY(-2px);
+}
+
+.trainer-navbar .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 15px;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+}
+
+.trainer-navbar .nav-links li {
+    position: relative;
+    border: none;
+}
+
+.trainer-navbar .nav-links a,
+.trainer-navbar .nav-links button {
+    color: white;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    padding: 0;
+    position: relative;
+    display: inline-block;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none;
+    border-radius: 0;
+}
+
+.trainer-navbar .nav-links a:hover,
+.trainer-navbar .nav-links a.active,
+.trainer-navbar .nav-links button:hover {
+    color: #FF5733;
+}
+
+.trainer-navbar .logout-btn {
+    background: transparent !important;
+    border: none !important;
+    color: white;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    font-weight: 500;
+    box-shadow: none !important;
+}
+
+.trainer-navbar .logout-btn:hover {
+    color: #FF5733;
+    background: transparent !important;
+}
+
+.trainer-navbar .hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    z-index: 1001;
+    width: 30px;
+    height: 20px;
+    position: relative;
+    justify-content: space-between;
+}
+
+.trainer-navbar .hamburger span {
+    background: white;
+    height: 2px;
+    width: 100%;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+    transform-origin: center;
+}
+
+/* Hamburger Animation */
+.trainer-navbar .hamburger.open span:nth-child(1) {
+    transform: translateY(9px) rotate(45deg);
+}
+
+.trainer-navbar .hamburger.open span:nth-child(2) {
+    opacity: 0;
+}
+
+.trainer-navbar .hamburger.open span:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .trainer-navbar .hamburger {
+        display: flex;
+    }
+    
+    .trainer-navbar .nav-links {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 70%;
+        height: 100vh;
+        background-color: #000000;
+        flex-direction: column;
+        padding: 5rem 2rem;
+        transition: right 0.3s ease;
+        gap: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+    
+    .trainer-navbar .nav-links.active {
+        right: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .trainer-navbar .container {
+        padding: 0 1rem;
+    }
+
+    .trainer-navbar .hamburger {
+        display: flex;
+    }
+
+    .trainer-navbar .nav-links {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 280px;
+        height: 100vh;
+        background: #000000;
+        flex-direction: column;
+        padding: 5rem 1.5rem 1.5rem;
+        transition: right 0.3s ease;
+        gap: 1rem;
+        overflow-y: auto;
+        backdrop-filter: blur(10px);
+    }
+
+    .trainer-navbar .nav-links.active {
+        display: flex;
+        right: 0;
+        box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .trainer-navbar .nav-links li {
+        width: 100%;
+        border: none;
+    }
+    
+    .trainer-navbar .nav-links a,
+    .trainer-navbar .nav-links button {
+        width: 100%;
+        display: block;
+        padding: 0.75rem 0;
+        background: transparent !important;
+        border: none !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .trainer-navbar .logo a {
+        font-size: 1.5rem;
+    }
+    
+    .trainer-navbar .nav-links {
+        width: 100%;
+    }
+}
+
+:root {
+  --primary-color: #3f51b5;
+  --primary-light: #757de8;
+  --primary-dark: #002984;
+  --secondary-color: #f50057;
+  --text-color: #333;
+  --text-light: #757575;
+  --background-color: #f5f5f5;
+  --surface-color: #fff;
+  --error-color: #f44336;
+  --success-color: #4caf50;
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 70px;
+  --header-height: 64px;
+  --transition-speed: 0.3s;
+}
+
+/* Sidebar Styles */
+.trainer-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background-color: #000000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  transition: transform var(--transition-speed) ease;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile Toggle Button */
+.trainer-mobile-toggle {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--header-height);
+  background-color: #000000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  padding: 0 16px;
+  align-items: center;
+}
+
+.trainer-mobile-toggle button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-logo {
+  margin-left: 16px;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.mobile-logo .track-part {
+  color: white;
+}
+
+.mobile-logo .fit-part {
+  color: #ff5733;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  height: var(--header-height);
+}
+
+.sidebar-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-logo .track-part {
+  color: white;
+}
+
+.sidebar-logo .fit-part {
+  color: #ff5733;
+}
+
+/* Trainer Profile Section */
+.trainer-profile-section {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #000000;
+}
+
+.trainer-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background-color: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trainer-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+  background-color: var(--primary-color);
+}
+
+.trainer-info {
+  text-align: center;
+  background-color: #000000;
+  width: 100%;
+}
+
+.trainer-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  color: white;
+  font-weight: 600;
+  background-color: #000000;
+}
+
+.trainer-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  background-color: #000000;
+}
+
+/* Navigation Links */
+.sidebar-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar-nav li {
+  margin: 4px 0;
+}
+
+.sidebar-nav li a {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.85);
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  margin: 0 8px;
+}
+
+.sidebar-nav li a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ff5733;
+  transform: translateX(5px);
+}
+
+.sidebar-nav li.active a {
+  background-color: rgba(255, 87, 51, 0.2);
+  color: #ff5733;
+  border-left: 3px solid #ff5733;
+}
+
+.sidebar-nav li a svg {
+  margin-right: 16px;
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 0.2s ease;
+}
+
+.sidebar-nav li a:hover svg {
+  color: #ff5733;
+}
+
+.sidebar-nav li.active a svg {
+  color: #ff5733;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-footer .logout-btn {
+  width: 100%;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-footer .logout-btn:hover {
+  background-color: rgba(255, 87, 51, 0.2);
+  color: #ff5733;
+  border-color: #ff5733;
+  transform: translateY(-2px);
+}
+
+/* Overlay for mobile */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: none;
+}
+
+.sidebar-overlay.active {
+  display: block;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .trainer-sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .trainer-sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .trainer-mobile-toggle {
+    display: flex;
+  }
+  
+  /* Add padding to main content to account for mobile header */
+  body {
+    padding-top: var(--header-height);
+  }
+}
+
+/* Adjust main content to make room for sidebar */
+@media (min-width: 769px) {
+  body {
+    padding-left: var(--sidebar-width);
+  }
+}

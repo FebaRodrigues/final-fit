@@ -1,0 +1,380 @@
+/* UserNavbar.css */
+.user-navbar {
+    background-color: #000000;
+    padding: 1rem 0;
+    position: sticky;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    box-shadow: none;
+    transition: background-color 0.3s ease;
+}
+
+/* Add a background when scrolling */
+.user-navbar.scrolled {
+    background-color: #000000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* ====== Navbar Container ====== */
+.user-navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+/* ====== Logo Styling ====== */
+.user-navbar .logo a {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+    letter-spacing: -0.5px;
+    position: relative;
+    display: inline-block;
+    padding: 0.25rem 0;
+    transition: transform 0.2s ease;
+}
+
+/* Logo styles now using common TracFitLogo.css */
+/* Removed conflicting styles for .track-part and .fit-part */
+
+.user-navbar .logo a:hover {
+    transform: translateY(-2px);
+}
+
+/* ====== Navigation Links ====== */
+.user-navbar .nav-links {
+    list-style: none;
+    display: flex;
+    gap: 15px;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+}
+
+.user-navbar .nav-links li {
+    position: relative;
+    border: none;
+}
+
+.user-navbar .nav-links a,
+.user-navbar .nav-links button {
+    color: white;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    padding: 0;
+    position: relative;
+    display: inline-block;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none;
+    border-radius: 0;
+}
+
+/* ====== Active & Hover Effects ====== */
+.user-navbar .nav-links a:hover,
+.user-navbar .nav-links a.active,
+.user-navbar .nav-links button:hover {
+    color: #FF5733;
+}
+
+/* ====== Auth Dropdown ====== */
+.auth-dropdown {
+    position: relative;
+}
+
+.auth-dropdown-toggle {
+    background: transparent !important;
+    border: none !important;
+    color: white;
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: none !important;
+}
+
+.auth-dropdown-toggle:hover {
+    color: #FF5733;
+    background: transparent !important;
+}
+
+.dropdown-arrow {
+    margin-left: 0.5rem;
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+.dropdown-arrow.open {
+    transform: rotate(180deg);
+}
+
+.auth-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background-color: #000000;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    width: 220px;
+    padding: 1rem;
+    z-index: 1000;
+    display: none;
+    transform: translateY(10px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.auth-dropdown-menu.show {
+    display: block;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.auth-dropdown-menu li {
+    margin-bottom: 1rem;
+    border: none;
+}
+
+.auth-dropdown-menu li:last-child {
+    margin-bottom: 0;
+}
+
+.auth-dropdown-menu h4 {
+    color: white;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    position: relative;
+    padding-bottom: 0.25rem;
+}
+
+.auth-dropdown-menu h4::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 2rem;
+    height: 2px;
+    background: #FF5733;
+}
+
+.auth-dropdown-menu a {
+    display: block;
+    color: white;
+    padding: 0.5rem 0;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    background: transparent !important;
+    border: none !important;
+}
+
+.auth-dropdown-menu a:hover {
+    color: #FF5733;
+    background-color: transparent !important;
+    padding-left: 0.5rem;
+}
+
+/* ====== Logout Button ====== */
+.user-navbar .logout-btn {
+    background: transparent !important;
+    border: none !important;
+    color: white;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    font-weight: 500;
+    box-shadow: none !important;
+}
+
+.user-navbar .logout-btn:hover {
+    color: #FF5733;
+    background: transparent !important;
+}
+
+/* ====== Membership Status ====== */
+.user-navbar .membership-status {
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 500;
+    background: transparent !important;
+    border: none !important;
+    padding: 0;
+}
+
+/* ====== Membership Plan ====== */
+.user-navbar .membership-plan {
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background-color: transparent;
+    border: 2px solid #FF7A33;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-left: 10px;
+    display: inline-block;
+    text-align: center;
+}
+
+.user-navbar .membership-plan:not(:empty) {
+    background-color: rgba(255, 122, 51, 0.35);
+}
+
+/* ====== Hamburger Menu ====== */
+.user-navbar .hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    z-index: 1001;
+    width: 30px;
+    height: 20px;
+    position: relative;
+    justify-content: space-between;
+}
+
+.user-navbar .hamburger span {
+    background: white;
+    height: 2px;
+    width: 100%;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+    transform-origin: center;
+}
+
+/* Hamburger Animation */
+.user-navbar .hamburger.open span:nth-child(1) {
+    transform: translateY(9px) rotate(45deg);
+}
+
+.user-navbar .hamburger.open span:nth-child(2) {
+    opacity: 0;
+}
+
+.user-navbar .hamburger.open span:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+}
+
+/* ====== Responsive Styles ====== */
+@media (max-width: 992px) {
+    .user-navbar .hamburger {
+        display: flex;
+    }
+    
+    .user-navbar .nav-links {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 70%;
+        height: 100vh;
+        background-color: #000000;
+        flex-direction: column;
+        padding: 5rem 2rem;
+        transition: right 0.3s ease;
+        gap: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+    
+    .user-navbar .nav-links.active {
+        right: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .user-navbar .container {
+        padding: 0 1rem;
+    }
+
+    .user-navbar .hamburger {
+        display: flex;
+    }
+
+    .user-navbar .nav-links {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 280px;
+        height: 100vh;
+        background: #000000;
+        flex-direction: column;
+        padding: 5rem 1.5rem 1.5rem;
+        transition: right 0.3s ease;
+        gap: 1rem;
+        overflow-y: auto;
+        backdrop-filter: blur(10px);
+    }
+
+    .user-navbar .nav-links.active {
+        right: 0;
+        box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-navbar .nav-links li {
+        width: 100%;
+        border: none;
+    }
+    
+    .user-navbar .nav-links a,
+    .user-navbar .nav-links button {
+        width: 100%;
+        display: block;
+        padding: 0.75rem 0;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    .auth-dropdown {
+        width: 100%;
+    }
+
+    .auth-dropdown-toggle {
+        width: 100%;
+        justify-content: space-between;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    .auth-dropdown-menu {
+        position: relative;
+        width: 100%;
+        box-shadow: none;
+        border: none !important;
+        background-color: transparent !important;
+        margin-top: 0.5rem;
+    }
+    
+    .user-navbar .membership-status {
+        margin: 0.5rem 0;
+        background: transparent !important;
+        border: none !important;
+    }
+    
+    .user-navbar .membership-plan {
+        margin: 0.5rem 0;
+        width: auto;
+        display: inline-block;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .user-navbar .logo a {
+        font-size: 1.5rem;
+    }
+    
+    .user-navbar .nav-links {
+        width: 100%;
+    }
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TrackFit - Fitness Management System</title>
+    <script>
+      // Server port detection script
+      (function() {
+        // Try to get the server port from the current-port.txt file
+        async function detectServerPort() {
+          try {
+            const response = await fetch('/current-port.txt', { 
+              cache: 'no-store' // Don't use cache
+            });
+            
+            if (response.ok) {
+              const portText = await response.text();
+              const port = parseInt(portText.trim(), 10);
+              if (!isNaN(port)) {
+                console.log(`Found server port ${port} from port file`);
+                localStorage.setItem('serverPort', port.toString());
+                return port;
+              }
+            }
+          } catch (error) {
+            console.log('Port file not found or not accessible');
+          }
+          
+          // Use saved port or default to 5050
+          const savedPort = localStorage.getItem('serverPort') || '5050';
+          console.log(`Using saved or default port: ${savedPort}`);
+          return savedPort;
+        }
+        
+        // Execute the detection
+        detectServerPort();
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html> 

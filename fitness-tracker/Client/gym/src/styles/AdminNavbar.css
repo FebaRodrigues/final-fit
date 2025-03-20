@@ -1,0 +1,161 @@
+.admin-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+  padding: 15px 25px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 20;
+  transition: all 0.3s ease;
+}
+
+.admin-navbar-title h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #333;
+  font-weight: 600;
+  position: relative;
+  padding-left: 15px;
+}
+
+.admin-navbar-title h1::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 24px;
+  background-color: #e94560;
+  border-radius: 3px;
+}
+
+.admin-navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.admin-navbar-notifications {
+  position: relative;
+  font-size: 20px;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.admin-navbar-notifications:hover {
+  color: #e94560;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #e94560;
+  color: white;
+  font-size: 12px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(233, 69, 96, 0.5);
+}
+
+.admin-navbar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 30px;
+  transition: all 0.3s ease;
+}
+
+.admin-navbar-profile:hover {
+  background-color: #f5f5f5;
+}
+
+.admin-navbar-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.admin-navbar-profile:hover .admin-navbar-avatar {
+  border-color: #e94560;
+}
+
+.admin-navbar-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.admin-navbar-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f8f9fa;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 30px;
+  cursor: pointer;
+  color: #555;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.admin-navbar-logout:hover {
+  background-color: #e94560;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(233, 69, 96, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .admin-navbar {
+    padding: 12px 15px;
+  }
+  
+  .admin-navbar-title h1 {
+    font-size: 20px;
+  }
+  
+  .admin-navbar-name {
+    display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .admin-navbar-title h1 {
+    font-size: 18px;
+    padding-left: 10px;
+  }
+  
+  .admin-navbar-title h1::before {
+    height: 18px;
+    width: 4px;
+  }
+  
+  .admin-navbar-actions {
+    gap: 15px;
+  }
+  
+  .admin-navbar-logout {
+    padding: 8px;
+  }
+  
+  .admin-navbar-logout span {
+    display: none;
+  }
+} 

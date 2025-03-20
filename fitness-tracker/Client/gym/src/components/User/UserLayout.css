@@ -1,0 +1,143 @@
+.user-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  background-color: #fff;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.content-container {
+  flex: 1;
+  padding: 0;
+  margin: 0;
+  margin-right: 250px; /* Changed from margin-left to margin-right to account for sidebar on right */
+  transition: margin 0.3s ease;
+  width: calc(100% - 250px);
+  max-width: calc(100% - 250px);
+  box-sizing: border-box;
+  min-height: 100vh;
+  background-color: #fff;
+  border-right: none; /* Changed from border-left to border-right */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow-x: visible; /* Changed from hidden to visible to prevent content clipping */
+  z-index: 1; /* Ensure content container is above sidebar */
+}
+
+/* Container for the actual content */
+.content-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 2; /* Ensure content appears above sidebar */
+}
+
+/* Full width content for pages without sidebar */
+.content-container.full-width {
+  margin-left: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+/* Ensure content in full-width container takes full height */
+.content-container.full-width > * {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.content-container > * {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #fff;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+}
+
+/* Responsive styles */
+@media (max-width: 1400px) {
+  .content-wrapper {
+    max-width: 100%; /* Changed from 1000px to ensure full width */
+  }
+}
+
+@media (max-width: 1200px) {
+  .content-wrapper {
+    max-width: 100%; /* Changed from 900px to ensure full width */
+  }
+}
+
+@media (max-width: 768px) {
+  .user-layout {
+    flex-direction: column;
+  }
+  
+  .content-container {
+    margin-right: 0; /* Changed from margin-left to margin-right */
+    width: 100%;
+  }
+  
+  .content-wrapper {
+    padding: 15px;
+  }
+  
+  .sidebar-overlay.active {
+    display: block;
+  }
+}
+
+@media (max-width: 576px) {
+  .content-container {
+    padding: 0;
+  }
+  
+  .content-wrapper {
+    padding: 10px;
+  }
+}
+
+/* Special styling for home page */
+.home-layout {
+  position: relative;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.home-layout .navbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background-color: transparent;
+} 

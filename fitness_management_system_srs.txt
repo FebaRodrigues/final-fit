@@ -1,0 +1,297 @@
+# Software Requirements Specification (SRS)
+## Fitness Management System
+
+### 1. Introduction
+
+#### 1.1 Purpose
+This Software Requirements Specification (SRS) document describes the functional and non-functional requirements for the Fitness Management System. The system is designed to provide comprehensive fitness management services for users, trainers, and administrators.
+
+#### 1.2 Scope
+The Fitness Management System is a web-based application that facilitates the management of fitness activities, goals, trainer-client relationships, and spa services. It provides different interfaces and functionality for users, trainers, and administrators.
+
+#### 1.3 Definitions and Acronyms
+- **FMS**: Fitness Management System
+- **User**: Regular gym member
+- **Trainer**: Fitness professional
+- **Admin**: System administrator
+- **SPA**: Spa services provided by the fitness center
+
+### 2. Overall Description
+
+#### 2.1 Product Perspective
+The Fitness Management System is a standalone web application that interacts with external services such as Cloudinary for image storage. It consists of client-side and server-side components that communicate through RESTful APIs.
+
+#### 2.2 Product Functions
+- User authentication and authorization
+- Profile management for users and trainers
+- Goal setting and tracking
+- Workout plan creation and management
+- Spa service booking and management
+- Administrative oversight and reporting
+
+#### 2.3 User Classes and Characteristics
+
+**Regular Users:**
+- Manage personal profiles
+- Set and track fitness goals
+- Book spa services
+- View trainer-assigned workouts and goals
+- Track progress on goals and workouts
+
+**Trainers:**
+- Manage professional profiles
+- Create and assign goals to clients
+- Create and assign workout plans
+- Monitor client progress
+- Update availability and certifications
+
+**Administrators:**
+- Manage all users and trainers
+- Oversee spa service bookings
+- Generate reports and analytics
+- Configure system settings
+- Manage subscriptions
+
+#### 2.4 Operating Environment
+- Web application accessible via modern browsers
+- Responsive design for mobile and desktop access
+- Backend server running Node.js
+- MongoDB database
+- Cloudinary for image storage
+
+#### 2.5 Design and Implementation Constraints
+- Must be secure and protect user data
+- Must be responsive and accessible on various devices
+- Must handle concurrent users efficiently
+- Must integrate with Cloudinary for image storage
+
+#### 2.6 Assumptions and Dependencies
+- Users have access to internet-connected devices
+- Server hosting environment supports Node.js
+- MongoDB database is available
+- Cloudinary services are accessible
+
+### 3. Specific Requirements
+
+#### 3.1 External Interface Requirements
+
+##### 3.1.1 User Interfaces
+- **Login/Registration Interface**: Forms for user authentication
+- **User Dashboard**: Displays goals, progress, and upcoming appointments
+- **Trainer Dashboard**: Shows clients, assigned goals, and schedules
+- **Admin Dashboard**: Provides system oversight and management tools
+- **Goal Management Interface**: Forms and displays for creating and tracking goals
+- **Spa Booking Interface**: Calendar and forms for booking spa services
+
+##### 3.1.2 Hardware Interfaces
+- No specific hardware interfaces required beyond standard computing devices
+
+##### 3.1.3 Software Interfaces
+- **Cloudinary API**: For image storage and retrieval
+- **Payment Gateway**: For processing subscription and service payments
+
+##### 3.1.4 Communications Interfaces
+- **RESTful API**: For client-server communication
+- **WebSockets**: For real-time notifications (future enhancement)
+
+#### 3.2 Functional Requirements
+
+##### 3.2.1 Authentication System
+- **User Registration**
+  - The system shall allow new users to register with email and password
+  - The system shall verify email addresses
+  - The system shall assign appropriate roles (user, trainer, admin)
+
+- **User Login**
+  - The system shall authenticate users with email and password
+  - The system shall issue JWT tokens for session management
+  - The system shall enforce password security policies
+
+- **Password Recovery**
+  - The system shall provide password reset functionality
+  - The system shall send reset links to registered email addresses
+
+##### 3.2.2 User Management
+- **Profile Management**
+  - The system shall allow users to update personal information
+  - The system shall allow users to upload profile pictures
+  - The system shall track membership status
+
+- **Subscription Management**
+  - The system shall track user subscription status
+  - The system shall allow admins to modify subscription details
+  - The system shall notify users of subscription expiration
+
+##### 3.2.3 Trainer Management
+- **Trainer Profile**
+  - The system shall store trainer certifications
+  - The system shall track trainer availability
+  - The system shall display trainer experience and specializations
+
+- **Client Management**
+  - The system shall allow trainers to view assigned clients
+  - The system shall enable trainers to create goals for clients
+  - The system shall allow trainers to monitor client progress
+
+##### 3.2.4 Goal Management
+- **Goal Creation**
+  - The system shall allow users to create personal goals
+  - The system shall allow trainers to create goals for clients
+  - The system shall support goal categories and types
+
+- **Goal Tracking**
+  - The system shall track progress toward goals
+  - The system shall display deadlines and milestones
+  - The system shall distinguish between user-created and trainer-assigned goals
+
+##### 3.2.5 Spa Service Management
+- **Service Definition**
+  - The system shall allow admins to create spa services
+  - The system shall store service details (name, description, duration, price)
+  - The system shall allow services to be activated or deactivated
+
+- **Booking Management**
+  - The system shall allow users to book spa services
+  - The system shall prevent double-booking
+  - The system shall allow admins to approve or reject bookings
+  - The system shall notify users of booking status changes
+
+##### 3.2.6 Administrative Functions
+- **User Oversight**
+  - The system shall allow admins to view and modify all user accounts
+  - The system shall allow admins to deactivate accounts
+  - The system shall provide search and filter functionality
+
+- **Reporting**
+  - The system shall generate usage reports
+  - The system shall track booking and subscription metrics
+  - The system shall provide financial summaries
+
+#### 3.3 Non-Functional Requirements
+
+##### 3.3.1 Performance Requirements
+- The system shall load pages within 2 seconds
+- The system shall handle at least 100 concurrent users
+- Database queries shall complete within 1 second
+
+##### 3.3.2 Security Requirements
+- User passwords shall be securely hashed
+- All API endpoints shall enforce proper authentication
+- Sensitive data shall be encrypted
+- The system shall implement rate limiting to prevent abuse
+
+##### 3.3.3 Software Quality Attributes
+- **Reliability**
+  - The system shall be available 99.9% of the time
+  - The system shall include error handling and recovery mechanisms
+
+- **Usability**
+  - The interface shall be intuitive and user-friendly
+  - The system shall provide helpful error messages
+  - The system shall be accessible on mobile and desktop devices
+
+- **Maintainability**
+  - The code shall be well-documented
+  - The system shall follow a modular architecture
+  - The system shall implement logging for troubleshooting
+
+### 4. Data Models
+
+#### 4.1 User Model
+- ID
+- Name
+- Email
+- Password (hashed)
+- Role (user, trainer, admin)
+- Profile Image
+- Membership Status
+- Registration Date
+
+#### 4.2 Goal Model
+- ID
+- Title
+- Description
+- Deadline
+- Progress
+- User ID (reference)
+- Trainer ID (optional reference)
+- Created By (user or trainer)
+- Creation Date
+
+#### 4.3 Workout Model
+- ID
+- Title
+- Description
+- Exercises (array)
+- Duration
+- Difficulty Level
+- User ID (reference)
+- Trainer ID (optional reference)
+
+#### 4.4 Spa Service Model
+- ID
+- Name
+- Description
+- Duration
+- Price
+- Image
+- Status (active/inactive)
+
+#### 4.5 Spa Booking Model
+- ID
+- Service ID (reference)
+- User ID (reference)
+- Date and Time
+- Status (pending, approved, rejected, completed)
+- Payment Status
+
+### 5. System Architecture
+
+#### 5.1 Client-Side Architecture
+- React.js frontend
+- Material-UI for UI components
+- Context API for state management
+- Axios for API communication
+
+#### 5.2 Server-Side Architecture
+- Node.js/Express backend
+- MongoDB database with Mongoose ODM
+- JWT authentication
+- RESTful API endpoints
+- Middleware for security and validation
+
+#### 5.3 External Services
+- Cloudinary for image storage
+- Email service for notifications
+- Payment gateway (future enhancement)
+
+### 6. Future Enhancements
+
+#### 6.1 Planned Features
+- Real-time notifications via WebSockets
+- Video consultation between trainers and clients
+- Mobile application
+- Integrated payment processing
+- Social features for community building
+- Nutrition tracking and meal planning
+
+### 7. Appendices
+
+#### 7.1 API Endpoints
+Detailed documentation of all API endpoints including:
+- Path
+- Method
+- Parameters
+- Request body
+- Response format
+- Authentication requirements
+- Error codes
+
+#### 7.2 UI Wireframes
+- Login/Registration screens
+- Dashboard layouts
+- Goal management interfaces
+- Spa booking flows
+- Administrative panels
+
+This SRS document serves as the foundation for the development of the Fitness Management System, ensuring all stakeholders have a clear understanding of the system requirements and functionality. 

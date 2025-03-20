@@ -1,0 +1,340 @@
+/* Navbar Base Styles */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    background: transparent; /* Transparent background */
+    backdrop-filter: blur(5px); /* Blur effect */
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transition: background-color 0.3s ease;
+    background-image: inherit;
+}
+
+/* Add a background when scrolling */
+.navbar.scrolled {
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+/* Logo */
+.logo {
+    font-size: 24px;
+    color: white;
+    font-weight: bold;
+}
+
+.logo a {
+    text-decoration: none;
+    color: white;
+}
+
+/* Logo styles now using common TracFitLogo.css */
+/* Removed conflicting styles for .bold and .highlight */
+
+/* Navigation Links */
+.nav-links {
+    list-style: none;
+    display: flex;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links li {
+    margin: 0 15px;
+    border: none;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: white;
+    font-size: 16px;
+    transition: 0.3s;
+    background: transparent !important;
+    border: none !important;
+    padding: 0;
+    box-shadow: none !important;
+}
+
+.nav-links a:hover,
+.nav-links .active {
+    color: #ff5733;
+}
+
+/* Auth Buttons */
+.auth-buttons {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.login-btn {
+    color: white;
+    text-decoration: none;
+    transition: 0.3s;
+    background: transparent !important;
+    border: none !important;
+    padding: 0;
+}
+
+.login-btn:hover {
+    color: #ff5733;
+}
+
+.signup-btn {
+    background: transparent !important;
+    color: white;
+    padding: 8px 15px;
+    border: 1px solid #ff5733 !important;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.signup-btn:hover {
+    background: rgba(255, 87, 34, 0.2) !important;
+    color: #ff5733;
+}
+
+/* User Actions */
+.user-actions {
+    position: relative;
+}
+
+/* Dropdown Menu */
+.dropdown {
+    position: relative;
+}
+
+.dropdown-toggle {
+    background: transparent !important;
+    border: none !important;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    transition: 0.3s;
+}
+
+.dropdown-toggle:hover {
+    color: #ff5733;
+}
+
+.dropdown-toggle::after {
+    content: "▼";
+    font-size: 10px;
+    margin-left: 5px;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    min-width: 180px;
+    border-radius: 5px;
+    padding: 10px 0;
+    display: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: none !important;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-menu li {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.dropdown-menu a,
+.dropdown-menu button {
+    display: block;
+    padding: 8px 15px;
+    color: white;
+    text-decoration: none;
+    transition: 0.3s;
+    font-size: 14px;
+    background: transparent !important;
+    border: none !important;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.dropdown-menu a:hover,
+.dropdown-menu button:hover {
+    color: #ff5733;
+    background-color: transparent !important;
+}
+
+/* Dropdown header and divider */
+.dropdown-header {
+    color: #ff5733;
+    font-weight: bold;
+    padding: 8px 15px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin: 8px 0;
+}
+
+/* Login options for mobile */
+.login-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.login-options h4 {
+    color: #ff5733;
+    margin: 10px 0 5px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Hamburger Menu */
+.hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    z-index: 1001;
+    width: 30px;
+    height: 20px;
+    position: relative;
+    justify-content: space-between;
+}
+
+.hamburger span {
+    background: white;
+    height: 2px;
+    width: 100%;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+/* Hamburger Animation */
+.hamburger.open span:nth-child(1) {
+    transform: translateY(9px) rotate(45deg);
+}
+
+.hamburger.open span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger.open span:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+}
+
+/* Mobile Menu */
+@media (max-width: 992px) {
+    .nav-links {
+        gap: 10px;
+    }
+    
+    .nav-links li {
+        margin: 0 10px;
+    }
+    
+    .nav-links a {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 15px 20px;
+    }
+    
+    .hamburger {
+        display: flex;
+    }
+    
+    .nav-links {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 250px;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.9);
+        flex-direction: column;
+        padding: 80px 20px 20px;
+        transition: right 0.3s ease;
+    }
+    
+    .nav-links.active {
+        right: 0;
+    }
+    
+    .nav-links li {
+        margin: 10px 0;
+        width: 100%;
+        text-align: left;
+    }
+    
+    .nav-links a {
+        font-size: 16px;
+        display: block;
+    }
+    
+    .auth-buttons.desktop {
+        display: none;
+    }
+    
+    .auth-buttons.mobile {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        margin-top: 20px;
+    }
+    
+    .login-btn, .signup-btn {
+        width: 100%;
+        margin: 5px 0;
+        text-align: left;
+    }
+    
+    .signup-btn {
+        margin-top: 5px;
+    }
+    
+    .dropdown-menu {
+        position: static;
+        width: 100%;
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+        margin-top: 10px;
+    }
+    
+    .dropdown-menu a {
+        padding-left: 0;
+    }
+    
+    .user-actions {
+        display: none;
+    }
+}
+
+/* Desktop only styles */
+@media (min-width: 769px) {
+    .auth-buttons.mobile {
+        display: none;
+    }
+}

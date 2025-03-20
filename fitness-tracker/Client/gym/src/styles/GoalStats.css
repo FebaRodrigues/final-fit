@@ -1,0 +1,283 @@
+/* GoalStats.css - Modern styling for goal statistics */
+
+.goal-stats {
+  padding: 1rem;
+}
+
+/* Stats cards grid */
+.goal-stats .grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .goal-stats .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .goal-stats .grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .goal-stats .grid-cols-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Individual stat cards */
+.goal-stats .stat-card {
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.goal-stats .stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+  z-index: 0;
+}
+
+.goal-stats .stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Stat card headings */
+.goal-stats .stat-card h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  position: relative;
+  z-index: 1;
+}
+
+/* Stat card values */
+.goal-stats .stat-card p {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0;
+  color: var(--text-primary);
+  position: relative;
+  z-index: 1;
+}
+
+/* Chart containers */
+.goal-stats .chart-container {
+  background-color: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  height: 100%;
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.goal-stats .chart-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(67, 97, 238, 0.03) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+  z-index: 0;
+}
+
+.goal-stats .chart-container:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-5px);
+}
+
+/* Chart headings */
+.goal-stats .chart-container h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  position: relative;
+  padding-bottom: 0.5rem;
+  z-index: 1;
+}
+
+.goal-stats .chart-container h4::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+  border-radius: 2px;
+}
+
+/* Chart height */
+.goal-stats .h-64 {
+  height: 16rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* No data message */
+.goal-stats .text-gray-500 {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Progress bar container */
+.goal-stats .bg-blue-50 {
+  background-color: rgba(67, 97, 238, 0.05);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  margin-top: 1rem;
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.goal-stats .bg-blue-50::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(67, 97, 238, 0.03) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+  z-index: 0;
+}
+
+/* Progress bar */
+.goal-stats .w-full.bg-gray-200 {
+  background-color: var(--border-color);
+  height: 0.6rem;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.goal-stats .h-4.rounded-full.bg-blue-500 {
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+  height: 0.6rem;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease-in-out;
+  box-shadow: 0 0 10px rgba(67, 97, 238, 0.3);
+}
+
+/* Progress percentage */
+.goal-stats .text-sm.font-medium {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Progress description */
+.goal-stats .text-sm.text-gray-600 {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Color customizations for stat cards */
+.goal-stats .bg-blue-50 {
+  background-color: rgba(67, 97, 238, 0.05);
+}
+
+.goal-stats .text-blue-500 {
+  color: var(--primary-color);
+}
+
+.goal-stats .bg-green-50 {
+  background-color: rgba(46, 204, 113, 0.05);
+}
+
+.goal-stats .text-green-500 {
+  color: var(--secondary-color);
+}
+
+.goal-stats .bg-yellow-50 {
+  background-color: rgba(255, 190, 11, 0.05);
+}
+
+.goal-stats .text-yellow-500 {
+  color: var(--accent-yellow);
+}
+
+.goal-stats .bg-purple-50 {
+  background-color: rgba(114, 9, 183, 0.05);
+}
+
+.goal-stats .text-purple-500 {
+  color: var(--accent-purple);
+}
+
+/* Stat card color variations */
+.goal-stats .stat-card:nth-child(1) {
+  border-left: 4px solid var(--primary-color);
+}
+
+.goal-stats .stat-card:nth-child(2) {
+  border-left: 4px solid var(--secondary-color);
+}
+
+.goal-stats .stat-card:nth-child(3) {
+  border-left: 4px solid var(--accent-yellow);
+}
+
+.goal-stats .stat-card:nth-child(4) {
+  border-left: 4px solid var(--accent-purple);
+}
+
+/* Add subtle animations */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(67, 97, 238, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(67, 97, 238, 0);
+  }
+}
+
+.goal-stats .h-4.rounded-full.bg-blue-500 {
+  animation: pulse 2s infinite;
+} 

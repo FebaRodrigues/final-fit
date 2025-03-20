@@ -1,0 +1,473 @@
+/* GoalCard.css - Modern styling for goal cards */
+
+.goal-card {
+  transition: all var(--transition-normal);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.goal-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}/* GoalCard.css - Modern styling for goal cards */
+
+.goal-card {
+  transition: all var(--transition-normal);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.goal-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+.goal-card .p-4 {
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Goal type badge */
+.goal-card .inline-block.px-2.py-1.text-xs {
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  padding: 0.35rem 0.75rem;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Action buttons container */
+.goal-card .flex.space-x-1 {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Action buttons */
+.goal-card .p-1\.5 {
+  padding: 0.4rem;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Icon size */
+.goal-card .h-4.w-4 {
+  height: 0.85rem;
+  width: 0.85rem;
+}
+
+.goal-card .p-1\.5:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Progress bar */
+.goal-card .bg-gray-200 {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--border-color);
+  overflow: hidden;
+  position: relative;
+}
+
+.goal-card .h-2\.5 {
+  height: 8px;
+  transition: width 0.5s ease-in-out;
+  border-radius: var(--radius-full);
+  background-image: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+}
+
+/* Goal title */
+.goal-card .text-md.font-semibold {
+  font-size: 1.1rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Goal notes */
+.goal-card .text-gray-600.text-sm {
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+/* Date information */
+.goal-card .text-xs.text-gray-500 {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+/* Milestones section */
+.goal-card .border-t.border-gray-100 {
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.75rem;
+  margin-top: auto;
+}
+
+.goal-card .text-sm.font-medium.text-gray-700 {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Footer action area */
+.goal-card .bg-gray-50 {
+  background-color: rgba(248, 250, 252, 0.5);
+  border-top: 1px solid var(--border-color);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Update progress button */
+.goal-card .inline-flex.items-center.px-3.py-1\.5 {
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-sm);
+}
+
+.goal-card .inline-flex.items-center.px-3.py-1\.5:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Completed goal styling */
+.goal-card.border-green-300 {
+  border-color: var(--secondary-light);
+  background-color: rgba(46, 204, 113, 0.05);
+}
+
+.goal-card .bg-green-100.text-green-800 {
+  background-color: rgba(46, 204, 113, 0.1);
+  color: var(--secondary-dark);
+}
+
+/* Active goal styling */
+.goal-card .bg-blue-100.text-blue-800 {
+  background-color: rgba(67, 97, 238, 0.1);
+  color: var(--primary-dark);
+}
+
+/* Button colors */
+.goal-card .bg-blue-50.text-blue-600 {
+  background-color: rgba(67, 97, 238, 0.05);
+  color: var(--primary-color);
+}
+
+.goal-card .bg-yellow-50.text-yellow-600 {
+  background-color: rgba(255, 190, 11, 0.05);
+  color: var(--accent-yellow);
+}
+
+.goal-card .bg-green-50.text-green-600 {
+  background-color: rgba(46, 204, 113, 0.05);
+  color: var(--secondary-color);
+}
+
+.goal-card .bg-red-50.text-red-600 {
+  background-color: rgba(230, 57, 70, 0.05);
+  color: var(--accent-red);
+}
+
+/* Days remaining/overdue text */
+.goal-card .flex.justify-between.text-xs.text-gray-500 span:last-child {
+  font-weight: 500;
+}
+
+/* Card header with badges and actions */
+.goal-card .flex.justify-between.items-start.mb-2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+/* Badge container */
+.goal-card .flex.items-center.gap-2.mb-1 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Progress percentage text */
+.goal-card .flex.justify-between.text-xs.text-gray-500.mt-1 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 0.5rem;
+}
+
+/* Add a subtle pattern to the card */
+.goal-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(67, 97, 238, 0.03) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+}
+
+/* Add a subtle hover effect to the badges */
+.goal-card .inline-block.px-2.py-1.text-xs:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Add a subtle glow to the progress bar for completed goals */
+.goal-card.border-green-300 .h-2\.5 {
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.3);
+} 
+
+.goal-card .p-4 {
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Goal type badge */
+.goal-card .inline-block.px-2.py-1.text-xs {
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  padding: 0.35rem 0.75rem;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Action buttons container */
+.goal-card .flex.space-x-1 {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Action buttons */
+.goal-card .p-1\.5 {
+  padding: 0.4rem;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Icon size */
+.goal-card .h-4.w-4 {
+  height: 0.85rem;
+  width: 0.85rem;
+}
+
+.goal-card .p-1\.5:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Progress bar */
+.goal-card .bg-gray-200 {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--border-color);
+  overflow: hidden;
+  position: relative;
+}
+
+.goal-card .h-2\.5 {
+  height: 8px;
+  transition: width 0.5s ease-in-out;
+  border-radius: var(--radius-full);
+  background-image: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+}
+
+/* Goal title */
+.goal-card .text-md.font-semibold {
+  font-size: 1.1rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Goal notes */
+.goal-card .text-gray-600.text-sm {
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+/* Date information */
+.goal-card .text-xs.text-gray-500 {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+/* Milestones section */
+.goal-card .border-t.border-gray-100 {
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.75rem;
+  margin-top: auto;
+}
+
+.goal-card .text-sm.font-medium.text-gray-700 {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Footer action area */
+.goal-card .bg-gray-50 {
+  background-color: rgba(248, 250, 252, 0.5);
+  border-top: 1px solid var(--border-color);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Update progress button */
+.goal-card .inline-flex.items-center.px-3.py-1\.5 {
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-sm);
+}
+
+.goal-card .inline-flex.items-center.px-3.py-1\.5:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Completed goal styling */
+.goal-card.border-green-300 {
+  border-color: var(--secondary-light);
+  background-color: rgba(46, 204, 113, 0.05);
+}
+
+.goal-card .bg-green-100.text-green-800 {
+  background-color: rgba(46, 204, 113, 0.1);
+  color: var(--secondary-dark);
+}
+
+/* Active goal styling */
+.goal-card .bg-blue-100.text-blue-800 {
+  background-color: rgba(67, 97, 238, 0.1);
+  color: var(--primary-dark);
+}
+
+/* Button colors */
+.goal-card .bg-blue-50.text-blue-600 {
+  background-color: rgba(67, 97, 238, 0.05);
+  color: var(--primary-color);
+}
+
+.goal-card .bg-yellow-50.text-yellow-600 {
+  background-color: rgba(255, 190, 11, 0.05);
+  color: var(--accent-yellow);
+}
+
+.goal-card .bg-green-50.text-green-600 {
+  background-color: rgba(46, 204, 113, 0.05);
+  color: var(--secondary-color);
+}
+
+.goal-card .bg-red-50.text-red-600 {
+  background-color: rgba(230, 57, 70, 0.05);
+  color: var(--accent-red);
+}
+
+/* Days remaining/overdue text */
+.goal-card .flex.justify-between.text-xs.text-gray-500 span:last-child {
+  font-weight: 500;
+}
+
+/* Card header with badges and actions */
+.goal-card .flex.justify-between.items-start.mb-2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+/* Badge container */
+.goal-card .flex.items-center.gap-2.mb-1 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Progress percentage text */
+.goal-card .flex.justify-between.text-xs.text-gray-500.mt-1 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 0.5rem;
+}
+
+/* Add a subtle pattern to the card */
+.goal-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(67, 97, 238, 0.03) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+}
+
+/* Add a subtle hover effect to the badges */
+.goal-card .inline-block.px-2.py-1.text-xs:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Add a subtle glow to the progress bar for completed goals */
+.goal-card.border-green-300 .h-2\.5 {
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.3);
+} 

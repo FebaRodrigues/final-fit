@@ -1,0 +1,103 @@
+/* Footer.css - Modern styling for the footer */
+.footer {
+    width: 100%;
+    border: none !important;
+    outline: none !important;
+    margin-top: auto; /* Push to bottom of flex container */
+}
+
+/* Updated logo colors */
+.footer .track-part {
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 1em;
+}
+
+.footer .fit-part {
+    color: #ff5733 !important;
+    font-weight: 700;
+    font-size: 1em;
+}
+
+.footer .trackfit-text {
+    display: inline-block;
+    font-size: 1em;
+}
+
+/* Global footer specific styles */
+.global-footer {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    padding: 15px 0;
+    font-size: 0.9rem;
+    border: none !important;
+    margin-top: auto; /* Push to bottom of flex container */
+}
+
+.global-footer p {
+    margin: 0;
+    padding: 0;
+}
+
+.global-footer .trademark {
+    font-weight: 500;
+}
+
+.global-footer .track-part {
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.global-footer .fit-part {
+    color: #ff5733 !important;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.global-footer .trackfit-text {
+    display: inline-block;
+    font-size: 0.9rem;
+}
+
+/* Footer Bottom Links */
+.footer-bottom-links {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    justify-content: center;
+    border: none !important;
+}
+
+.footer-bottom-links a {
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.3s ease;
+    border: none !important;
+}
+
+.footer-bottom-links a:hover {
+    color: var(--primary-color, #ff5733);
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .footer-bottom-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .global-footer {
+        padding: 10px 0;
+    }
+    
+    .footer-bottom-links {
+        gap: 15px;
+    }
+}
+

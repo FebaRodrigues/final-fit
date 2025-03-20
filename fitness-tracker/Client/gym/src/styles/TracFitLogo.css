@@ -1,0 +1,73 @@
+/* Common TracFit Logo Styles */
+.tracfit-logo {
+  text-decoration: none;
+  display: inline-block;
+}
+
+.tracfit-logo a {
+  text-decoration: none;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  transition: color 0.3s ease;
+}
+
+.tracfit-logo .bold,
+.tracfit-logo .track-part {
+  color: white;
+}
+
+.tracfit-logo .highlight,
+.tracfit-logo .fit-part {
+  color: #ff5733;
+}
+
+.tracfit-logo a:hover .highlight,
+.tracfit-logo a:hover .fit-part {
+  color: #ff7757; /* Slightly lighter on hover */
+}
+
+/* Class for styling TrackFit text consistently across the application */
+.trackfit-text {
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+/* Default styling for light backgrounds */
+.trackfit-text .track-part {
+  color: black;
+}
+
+.trackfit-text .fit-part {
+  color: #ff5733;
+}
+
+/* Styling for dark backgrounds */
+.dark-bg .trackfit-text .track-part,
+.hero-content .trackfit-text .track-part,
+.cta-section .trackfit-text .track-part,
+.navbar .trackfit-text .track-part,
+.footer .trackfit-text .track-part {
+  color: white;
+}
+
+.dark-bg .trackfit-text .fit-part,
+.hero-content .trackfit-text .fit-part,
+.cta-section .trackfit-text .fit-part,
+.navbar .trackfit-text .fit-part,
+.footer .trackfit-text .fit-part {
+  color: #ff5733;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tracfit-logo a {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 576px) {
+  .tracfit-logo a {
+    font-size: 20px;
+  }
+} 

@@ -1,0 +1,576 @@
+/* src/components/UserDashboard/UserGoalForm.css */
+section { margin: 20px 0; }
+ul { list-style-type: none; padding: 0; }
+li { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+progress { width: 100%; }
+button { margin: 5px; }
+input, textarea, select { display: block; margin: 5px 0; }
+
+/* Goals Page Styling */
+/* Modern and visually appealing styles for the Goals page */
+
+/* General container styling */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Page title styling */
+h2.text-2xl {
+  color: #2c3e50;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+h2.text-2xl::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(90deg, #3498db, #2ecc71);
+  border-radius: 3px;
+}
+
+/* Card styling */
+.bg-white {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bg-white:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Stats cards */
+.stat-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Goal list items */
+.border {
+  border-width: 1px;
+  border-style: solid;
+  border-color: #e2e8f0;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.border:hover {
+  border-color: #3498db;
+  transform: translateY(-3px);
+}
+
+/* Progress bars */
+.bg-gray-200 {
+  background-color: #edf2f7;
+  border-radius: 9999px;
+  height: 8px;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+  height: 8px;
+  transition: width 0.5s ease-in-out;
+}
+
+/* Buttons styling */
+.bg-blue-500, .bg-green-500 {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.bg-blue-500:hover, .bg-green-500:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+.bg-blue-500 {
+  background-color: #3498db;
+}
+
+.bg-blue-500:hover {
+  background-color: #2980b9;
+}
+
+.bg-green-500 {
+  background-color: #2ecc71;
+}
+
+.bg-green-500:hover {
+  background-color: #27ae60;
+}
+
+/* Form styling */
+input, select, textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background-color: #f8fafc;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  outline: none;
+}
+
+/* Milestone section */
+.milestone-input {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+}
+
+.milestone-input:hover {
+  border-color: #3498db;
+  background-color: #f1f5f9;
+}
+
+/* Chart containers */
+.chart-container {
+  background-color: #ffffff;
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading spinner */
+.animate-spin {
+  border-color: #3498db;
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty state */
+.text-center.py-6 {
+  padding: 2rem 0;
+  background-color: #f8fafc;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+}
+
+/* Goal type badges */
+.capitalize {
+  text-transform: capitalize;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Deadline and date styling */
+.text-gray-500 {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+/* Remove spinner arrows from number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* UserGoalForm.css - Modern styling for user goal forms */
+
+/* Base styles for sections */
+.section {
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+/* List styles */
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* List item styles */
+li {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 0;
+  transition: all var(--transition-fast);
+}
+
+li:last-child {
+  border-bottom: none;
+}
+
+li:hover {
+  background-color: rgba(248, 250, 252, 0.5);
+  transform: translateX(5px);
+  padding-left: 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Input display styles */
+.input-display {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Goal progress container */
+.goal-progress-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.goal-progress-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(67, 97, 238, 0.03) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+  z-index: 0;
+}
+
+.goal-progress-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(46, 204, 113, 0.03) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  transform: translate(-30%, 30%);
+  z-index: 0;
+}
+
+/* Goal progress title */
+.goal-progress-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  position: relative;
+  padding-bottom: 0.75rem;
+  z-index: 1;
+}
+
+.goal-progress-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+  border-radius: 3px;
+}
+
+/* Goal details section */
+.goal-details {
+  background-color: rgba(248, 250, 252, 0.5);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-color);
+  position: relative;
+  z-index: 1;
+}
+
+.goal-details h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.goal-details h3::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+  border-radius: 2px;
+}
+
+.goal-details p {
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.goal-details strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Progress form */
+.progress-form {
+  position: relative;
+  z-index: 1;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  transition: all var(--transition-fast);
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.form-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+
+/* Progress bar */
+.progress-container {
+  margin: 1.5rem 0;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 0.75rem;
+  background-color: var(--border-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease-in-out;
+}
+
+.progress-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Form actions */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary:hover {
+  background-color: var(--secondary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.btn-outline:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Milestone section */
+.milestones-section {
+  margin-top: 2rem;
+}
+
+.milestones-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.milestones-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+  border-radius: 2px;
+}
+
+.milestone-item {
+  background-color: rgba(248, 250, 252, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.milestone-item:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+.milestone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.milestone-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.milestone-status {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.milestone-status.completed {
+  background-color: rgba(46, 204, 113, 0.1);
+  color: var(--secondary-dark);
+}
+
+.milestone-status.pending {
+  background-color: rgba(255, 190, 11, 0.1);
+  color: var(--accent-yellow);
+}
+
+.milestone-description {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .goal-progress-container {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 1rem;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

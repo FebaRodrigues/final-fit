@@ -1,0 +1,606 @@
+/* src/styles/Appointments.css */
+
+.appointments-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.appointments-container h2 {
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 28px;
+}
+
+.appointments-container h3 {
+  color: #444;
+  margin-bottom: 15px;
+  font-size: 22px;
+}
+
+/* Tabs Navigation */
+.appointments-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.appointments-tabs button {
+  padding: 10px 20px;
+  background-color: #f1f1f1;
+  color: #333;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.appointments-tabs button:hover {
+  background-color: #e0e0e0;
+}
+
+.appointments-tabs button.active {
+  background-color: #3498db;
+  color: white;
+}
+
+/* Trainers List */
+.trainers-list {
+  margin-bottom: 30px;
+}
+
+.trainers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.trainer-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.trainer-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.trainer-image {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 8px 8px 0 0;
+}
+
+.trainer-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trainer-info {
+  padding: 15px;
+}
+
+.trainer-info h4 {
+  margin: 0 0 10px;
+  color: #2c3e50;
+  font-size: 18px;
+}
+
+.trainer-info p {
+  margin: 5px 0;
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.trainer-info .specialties {
+  color: #34495e;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.trainer-info .bio {
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 15px;
+  max-height: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.select-trainer-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-weight: 500;
+}
+
+.select-trainer-btn:hover {
+  background-color: #2980b9;
+}
+
+/* Trainer approval badges */
+.approval-badge {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+}
+
+.approval-badge.approved {
+  background-color: #4CAF50;
+}
+
+.approval-badge.pending {
+  background-color: #FF9800;
+}
+
+/* Booking Form */
+.booking-form {
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+}
+
+.selected-trainer {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.selected-trainer img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 15px;
+}
+
+.selected-trainer h4 {
+  margin: 0 0 5px;
+  color: #2c3e50;
+}
+
+.selected-trainer p {
+  margin: 0;
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.booking-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.book-btn {
+  padding: 12px 20px;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-weight: 500;
+  flex: 1;
+}
+
+.book-btn:hover {
+  background-color: #27ae60;
+}
+
+.cancel-btn {
+  padding: 12px 20px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-weight: 500;
+  flex: 1;
+}
+
+.cancel-btn:hover {
+  background-color: #c0392b;
+}
+
+/* Appointments List */
+.appointments-list {
+  margin-bottom: 30px;
+}
+
+.appointments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.appointment-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.3s ease;
+  border-left: 5px solid #95a5a6;
+}
+
+.appointment-card.pending {
+  border-left-color: #f39c12;
+}
+
+.appointment-card.confirmed {
+  border-left-color: #2ecc71;
+}
+
+.appointment-card.canceled {
+  border-left-color: #e74c3c;
+}
+
+.appointment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #f9f9f9;
+  border-bottom: 1px solid #eee;
+}
+
+.appointment-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.status {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status.confirmed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status.canceled {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.appointment-details {
+  padding: 15px;
+}
+
+.appointment-details p {
+  margin: 8px 0;
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.no-appointments, .no-trainers {
+  text-align: center;
+  padding: 30px;
+  background: #f9f9f9;
+  border-radius: 10px;
+  color: #7f8c8d;
+}
+
+/* Change Trainer Section */
+.change-trainer {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.change-trainer p {
+  margin-bottom: 15px;
+  color: #7f8c8d;
+}
+
+.change-trainer-btn {
+  padding: 10px 20px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-weight: 500;
+}
+
+.change-trainer-btn:hover {
+  background-color: #2980b9;
+}
+
+/* Confirmation Dialog */
+.confirmation-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.confirmation-content {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.confirmation-content h3 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.confirmation-content p {
+  margin: 10px 0;
+  color: #7f8c8d;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.confirm-btn {
+  padding: 10px 20px;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-weight: 500;
+  flex: 1;
+}
+
+.confirm-btn:hover {
+  background-color: #27ae60;
+}
+
+/* Success Message */
+.success-message {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #2ecc71;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error Message */
+.error-message {
+  text-align: center;
+  padding: 30px;
+  background: #f8d7da;
+  border-radius: 10px;
+  color: #721c24;
+  margin-bottom: 20px;
+}
+
+.error-message button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Membership Required */
+.membership-required {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f9f9f9;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.membership-required h2 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.membership-required p {
+  color: #7f8c8d;
+  margin-bottom: 20px;
+}
+
+.membership-required button {
+  padding: 12px 25px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.membership-required button:hover {
+  background-color: #2980b9;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .trainers-grid,
+  .appointments-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .booking-actions {
+    flex-direction: column;
+  }
+  
+  .confirmation-actions {
+    flex-direction: column;
+  }
+  
+  .appointments-tabs {
+    flex-direction: column;
+  }
+  
+  .appointments-tabs button {
+    width: 100%;
+  }
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+}
+
+.trainer-preview {
+  margin: 20px 0;
+}
+
+.trainer-preview img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+.approval-warning {
+  background-color: #FFF3E0;
+  border-left: 4px solid #FF9800;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: left;
+}
+
+.approval-warning p {
+  margin: 0;
+  color: #E65100;
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+} 

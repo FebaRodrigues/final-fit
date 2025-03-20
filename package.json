@@ -1,0 +1,28 @@
+{
+  "name": "fitness-management-system",
+  "version": "1.0.0",
+  "description": "Fitness Management System",
+  "main": "index.js",
+  "scripts": {
+    "start": "node run-app.js",
+    "server": "cd fitness-tracker/Server && node index.js",
+    "client": "cd fitness-tracker/Client/gym && npm run dev",
+    "dev": "node run-app.js"
+  },
+  "keywords": [
+    "fitness",
+    "management",
+    "system"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.4.7",
+    "@mui/material": "^6.4.7",
+    "chart.js": "^4.4.8",
+    "dotenv": "^16.4.7",
+    "react-chartjs-2": "^5.3.0"
+  }
+}

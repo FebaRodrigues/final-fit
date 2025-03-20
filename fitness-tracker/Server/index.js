@@ -224,6 +224,50 @@ app.use('/api/spa', spaRoutes);
 
 console.log('All routes registered successfully');
 
+// Add a catch-all route at the end to handle any invalid API routes
+app.all('/api/*', (req, res) => {
+  // Extract the path that was tried
+  const attemptedPath = req.path;
+  
+  // List available valid endpoints
+  const availableEndpoints = [
+    '/api/users',
+    '/api/trainers',
+    '/api/admin',
+    '/api/workouts',
+    '/api/nutrition',
+    '/api/memberships',
+    '/api/payments',
+    '/api/appointments',
+    '/api/goals',
+    '/api/health',
+    '/api/notifications',
+    '/api/announcements',
+    '/api/reports',
+    '/api/workout-programs',
+    '/api/reminders',
+    '/api/workout-logs',
+    '/api/nutrition-plans',
+    '/api/analytics',
+    '/api/progress-reports',
+    '/api/trainer-payments',
+    '/api/food-database',
+    '/api/recipes',
+    '/api/spa',
+    '/api/payments/public-debug'
+  ];
+  
+  res.status(404).json({
+    error: `Cannot ${req.method} ${attemptedPath}`,
+    message: 'The requested API endpoint does not exist or you may not have permission to access it.',
+    availableEndpoints,
+    helpfulEndpoints: [
+      '/api/health',
+      '/api/payments/public-debug'
+    ]
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

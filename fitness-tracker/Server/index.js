@@ -128,6 +128,24 @@ app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 // Parse JSON body for other routes
 app.use(express.json());
 
+// Add a simple test endpoint to check if new deployments are working
+app.get('/api/test-debug', (req, res) => {
+  console.log('Test debug endpoint accessed:', new Date().toISOString());
+  res.status(200).json({
+    message: 'Test debug endpoint is working',
+    timestamp: new Date().toISOString(),
+    deploymentTime: '2024-03-20',
+    environment: process.env.NODE_ENV || 'development',
+    mongodb: {
+      connectionStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    },
+    session: {
+      exists: !!req.session,
+      id: req.session?.id || 'none'
+    }
+  });
+});
+
 // Add a health endpoint at the beginning of the routes
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
@@ -160,7 +178,9 @@ app.get('/api', (req, res) => {
             '/api/health',
             '/api/notifications',
             '/api/announcements',
-            '/api/reports'
+            '/api/reports',
+            '/api/test-debug',
+            '/api/payments/public-debug'
         ],
         documentation: 'Contact the developer for API documentation'
     });
@@ -254,7 +274,8 @@ app.all('/api/*', (req, res) => {
     '/api/food-database',
     '/api/recipes',
     '/api/spa',
-    '/api/payments/public-debug'
+    '/api/payments/public-debug',
+    '/api/test-debug'
   ];
   
   res.status(404).json({
@@ -263,7 +284,8 @@ app.all('/api/*', (req, res) => {
     availableEndpoints,
     helpfulEndpoints: [
       '/api/health',
-      '/api/payments/public-debug'
+      '/api/payments/public-debug',
+      '/api/test-debug'
     ]
   });
 });

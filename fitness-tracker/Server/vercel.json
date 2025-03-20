@@ -8,8 +8,16 @@
   ],
   "routes": [
     {
+      "src": "/api/test-debug",
+      "dest": "index.js"
+    },
+    {
+      "src": "/api/payments/public-debug",
+      "dest": "index.js"
+    },
+    {
       "src": "/api/(.*)",
-      "dest": "/index.js",
+      "dest": "index.js",
       "headers": {
         "Access-Control-Allow-Origin": "https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
@@ -19,7 +27,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/index.js"
+      "dest": "index.js"
     }
   ],
   "headers": [

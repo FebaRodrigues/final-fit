@@ -4,10 +4,9 @@ import { resetPortDetection } from './utils/serverPortDetector';
 
 // Function to get the server URL with the correct port
 export const getServerUrl = () => {
-    // Always use port 5050 for the server
-    console.log('Using fixed port 5050 for server connection');
-    localStorage.setItem('serverPort', '5050');
-    return 'http://localhost:5050/api';
+    // Use the environment variable instead of hardcoded localhost
+    console.log('Using API URL from environment:', import.meta.env.VITE_API_URL);
+    return import.meta.env.VITE_API_URL;
 };
 
 // Define API URL constant
@@ -161,10 +160,9 @@ API.interceptors.request.use(
 
 // Function to update the server port
 export const updateServerPort = (port) => {
-    // Always use port 5050 regardless of the port parameter
-    console.log(`Requested port update to ${port}, but using fixed port 5050 to maintain data consistency`);
-    localStorage.setItem('serverPort', '5050');
-    API.defaults.baseURL = 'http://localhost:5050/api';
+    // Use the environment variable instead of hardcoded localhost
+    console.log('Using API URL from environment');
+    API.defaults.baseURL = import.meta.env.VITE_API_URL;
     console.log(`API baseURL updated to: ${API.defaults.baseURL}`);
 };
 
@@ -813,13 +811,12 @@ export const loginUser = async (email, password) => {
         localStorage.removeItem('role');
         localStorage.removeItem('userId');
         
-        // Always use port 5050 for the server
-        const serverPort = '5050';
-        const baseURL = `http://localhost:${serverPort}/api`;
+        // Use the environment variable for the API URL
+        const baseURL = import.meta.env.VITE_API_URL;
         
         console.log(`Attempting login with server at ${baseURL}`);
         
-        // Create a new axios instance for this request to ensure we use the latest port
+        // Create a new axios instance for this request
         const loginAPI = axios.create({
             baseURL,
             timeout: 5000 // Longer timeout for login
@@ -827,8 +824,8 @@ export const loginUser = async (email, password) => {
         
         const response = await loginAPI.post('/users/login', { email, password });
         
-        // If login is successful, update the API baseURL
-        updateServerPort(serverPort);
+        // Update the API baseURL
+        updateServerPort();
         
         return response;
     } catch (error) {
@@ -841,7 +838,7 @@ export const loginUser = async (email, password) => {
         
         // Provide a more user-friendly error message for server connection issues
         if (error.code === 'ERR_NETWORK') {
-            throw new Error('Cannot connect to server. Please check if the server is running on port 5050.');
+            throw new Error('Cannot connect to server. Please check your internet connection and try again.');
         }
         
         throw error;
@@ -850,13 +847,12 @@ export const loginUser = async (email, password) => {
 
 export const registerUser = async (data) => {
     try {
-        // Always use port 5050 for the server
-        const serverPort = '5050';
-        const baseURL = `http://localhost:${serverPort}/api`;
+        // Use the environment variable for the API URL
+        const baseURL = import.meta.env.VITE_API_URL;
         
         console.log(`Attempting registration with server at ${baseURL}`);
         
-        // Create a new axios instance for this request to ensure we use the latest port
+        // Create a new axios instance for this request
         const registerAPI = axios.create({
             baseURL,
             timeout: 10000 // Longer timeout for registration with image upload
@@ -881,8 +877,8 @@ export const registerUser = async (data) => {
             }
         });
         
-        // If registration is successful, update the API baseURL
-        updateServerPort(serverPort);
+        // Update the API baseURL
+        updateServerPort();
         
         return response;
     } catch (error) {
@@ -1910,7 +1906,7 @@ export const updateUserFields = async (fields) => {
             throw new Error('Authentication token not found');
         }
         
-        const response = await axios.put('http://localhost:5050/api/users/update-fields', fields, {
+        const response = await axios.put(`${import.meta.env.VITE_API_URL}/users/update-fields`, fields, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'

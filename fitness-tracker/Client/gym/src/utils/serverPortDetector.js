@@ -14,56 +14,39 @@ export const detectServerPort = async () => {
     
     // Create a new promise for port detection
     portDetectionPromise = new Promise(async (resolve) => {
-        console.log('Attempting to detect server port...');
+        console.log('Using API URL from environment:', import.meta.env.VITE_API_URL);
         
-        // Only try port 5050 (which is our target port)
+        // Use the environment variable for the API URL
+        const apiUrl = import.meta.env.VITE_API_URL;
+        
         try {
-            console.log('Trying port 5050...');
-            const response = await axios.get('http://localhost:5050/api/health', {
+            console.log('Checking server health...');
+            const response = await axios.get(`${apiUrl}/health`, {
                 timeout: 5000 // Increased timeout for better chance of connection
             });
             
             if (response.status === 200 || response.status === 404) {
-                console.log('Server confirmed on port 5050');
-                localStorage.setItem('serverPort', '5050');
-                updateServerPort(5050);
-                resolve(5050);
-                return 5050;
+                console.log('Server confirmed as running');
+                resolve(apiUrl);
+                return apiUrl;
             }
         } catch (error) {
-            if (error.response) {
-                console.log('Server found on port 5050 (got response but not 200)');
-                localStorage.setItem('serverPort', '5050');
-                updateServerPort(5050);
-                resolve(5050);
-                return 5050;
-            }
-            console.log('Port 5050 not responding, but will still use it');
+            console.log('Server health check failed:', error.message);
         }
         
-        // Always use port 5050 regardless of connection status
-        console.log('Using port 5050 as requested.');
-        localStorage.setItem('serverPort', '5050');
-        updateServerPort(5050);
-        resolve(5050);
-        return 5050;
+        // Always use the environment variable
+        console.log('Using API URL from environment');
+        resolve(apiUrl);
+        return apiUrl;
     });
     
-    // Reset the promise after 30 seconds to allow for fresh detection if needed
-    setTimeout(() => {
-        portDetectionPromise = null;
-    }, 30000);
-    
-    // Return the promise
     return portDetectionPromise;
 };
 
 // Reset the port detection promise (useful for testing or forcing a new detection)
 export const resetPortDetection = () => {
     portDetectionPromise = null;
-    localStorage.removeItem('serverPort');
-    localStorage.setItem('serverPort', '5050'); // Always set to 5050 when resetting
-    console.log('Port detection reset. Will use port 5050 on next call.');
+    console.log('Port detection reset. Will use API URL from environment on next call.');
 };
 
 export default detectServerPort; 

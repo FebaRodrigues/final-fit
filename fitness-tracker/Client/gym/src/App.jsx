@@ -99,24 +99,9 @@ const MainLayout = () => {
 
 // Main App component
 const App = () => {
-  const [isPortDetected, setIsPortDetected] = useState(true); // Always consider port as detected
-  const [isLoading, setIsLoading] = useState(false); // Don't show loading screen
+  const [isLoading, setIsLoading] = useState(false);
   const [isServerRunning, setIsServerRunning] = useState(true);
   const [adminProfile, setAdminProfile] = useState(null);
-
-  useEffect(() => {
-    // Always use port 5050
-    console.log('Using fixed port 5050 as requested');
-    localStorage.setItem('serverPort', '5050');
-    setIsPortDetected(true);
-    setIsLoading(false);
-    
-    // No need for visibility change listener since we're always using port 5050
-    
-    return () => {
-      // No cleanup needed
-    };
-  }, []);
 
   // Add a useEffect to fetch admin profile if user is logged in as admin
   useEffect(() => {

@@ -70,6 +70,31 @@ app.use(cors({
 // Add pre-flight OPTIONS handler
 app.options('*', cors());
 
+// Add additional CORS headers for all responses
+app.use((req, res, next) => {
+    // Allow specific frontend domains
+    const allowedOrigins = [
+        'https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app',
+        'https://final-fit-frontend-ev7xv9kct-feba-rodrigues-projects.vercel.app'
+    ];
+    
+    const origin = req.headers.origin;
+    if (origin && (allowedOrigins.includes(origin) || origin.includes('vercel.app') || origin.includes('localhost'))) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+    } else {
+        next();
+    }
+});
+
 // Session configuration
 app.use(session({
   secret: ENV.SESSION_SECRET,

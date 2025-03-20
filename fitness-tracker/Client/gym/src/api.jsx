@@ -31,7 +31,11 @@ const API_URL = getServerUrl();
 const API = axios.create({
     baseURL: API_URL,
     timeout: 60000, // Increased to 60 seconds
-    withCredentials: true
+    withCredentials: true,
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
 });
 
 // Add request interceptor for FormData and auth
@@ -43,6 +47,7 @@ API.interceptors.request.use(config => {
         // Set a longer timeout for image uploads (3 minutes)
         config.timeout = 180000;
         console.log("FormData detected, using extended timeout:", config.timeout);
+        delete config.headers['Content-Type']; // Let browser set it for FormData
     }
     
     // Add auth token to every request if available

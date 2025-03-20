@@ -52,12 +52,23 @@ console.log('Serving static files from:', path.join(__dirname, 'public'));
 // Middleware
 app.use(cors({
   origin: ENV.NODE_ENV === 'production'
-    ? [ENV.CLIENT_URL, /\.vercel\.app$/, /localhost/]
+    ? [
+        ENV.CLIENT_URL,
+        /\.vercel\.app$/,
+        /localhost/,
+        'https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app',
+        'https://final-fit-frontend-ev7xv9kct-feba-rodrigues-projects.vercel.app'
+      ]
     : ENV.CLIENT_URL,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400 // 24 hours
 }));
+
+// Add pre-flight OPTIONS handler
+app.options('*', cors());
 
 // Session configuration
 app.use(session({

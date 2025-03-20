@@ -7,37 +7,29 @@ const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
 
-// Load environment variables from Server/.env
+// Load environment variables
 console.log('=== Loading Environment Variables ===');
+dotenv.config();
 
-const serverEnvPath = path.resolve(__dirname, '.env');
-if (fs.existsSync(serverEnvPath)) {
-  console.log(`Loading .env from: ${serverEnvPath}`);
-  dotenv.config({ path: serverEnvPath });
-} else {
-  console.error(`Server .env file not found at: ${serverEnvPath}`);
-  console.error('Please create a .env file in the Server directory with required configuration.');
+// Set default values for required environment variables
+const ENV = {
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT: process.env.PORT || 3000,
+  MONGO_URI: process.env.MONGO_URI,
+  JWT_SECRET: process.env.JWT_SECRET || 'fallback-secret-key-change-in-production',
+  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
+  SESSION_SECRET: process.env.SESSION_SECRET || 'session-secret-change-in-production'
+};
+
+// Validate critical environment variables
+if (!ENV.MONGO_URI) {
+  console.error('ERROR: MONGO_URI is not defined in environment variables');
   process.exit(1);
 }
 
 // Connect to MongoDB
 const connectDB = require('./config/db');
 connectDB();
-
-// Validate critical environment variables
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('ERROR: STRIPE_SECRET_KEY is not defined in .env file');
-  // Don't use a dummy key in production - this will cause issues with real payments
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('Using dummy key for development');
-    process.env.STRIPE_SECRET_KEY = 'sk_test_123456789';
-  }
-}
-
-if (!process.env.CLIENT_URL) {
-  console.error('Warning: CLIENT_URL is not defined in .env, using default');
-  process.env.CLIENT_URL = 'http://localhost:5173';
-}
 
 // Initialize Stripe with the secret key
 let stripe;
@@ -59,9 +51,9 @@ console.log('Serving static files from:', path.join(__dirname, 'public'));
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.CLIENT_URL, /\.vercel\.app$/, /localhost/] 
-    : process.env.CLIENT_URL,
+  origin: ENV.NODE_ENV === 'production'
+    ? [ENV.CLIENT_URL, /\.vercel\.app$/, /localhost/]
+    : ENV.CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -69,11 +61,11 @@ app.use(cors({
 
 // Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  secret: ENV.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production',
+  cookie: {
+    secure: ENV.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax'
   }
@@ -87,14 +79,16 @@ app.use(express.json());
 
 // Add a health endpoint at the beginning of the routes
 app.get('/api/health', (req, res) => {
-    // Get the port from the server address
-    const port = 5050;
-    res.status(200).json({ status: 'ok', port: port, serverTime: new Date().toISOString() });
+  res.status(200).json({ 
+    status: 'ok',
+    environment: ENV.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Add a fallback route for the root path
 app.get('/', (req, res) => {
-    res.status(200).json({ message: 'Fitness Management System API is running', port: 5050 });
+    res.status(200).json({ message: 'Fitness Management System API is running', port: ENV.PORT });
 });
 
 // Routes
@@ -158,34 +152,21 @@ console.log('All routes registered successfully');
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     message: 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    error: ENV.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
-// Update the server startup code to properly handle port conflicts
-const startServer = (port) => {
-  // Use environment port or default to 3000 (Vercel's preferred port)
-  const PORT = process.env.PORT || 3000;
-  
-  const server = app.listen(PORT)
-    .on('listening', () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Client URL: ${process.env.CLIENT_URL}`);
-    })
-    .on('error', (err) => {
-      console.error('Server error:', err);
-      process.exit(1);
-    });
-    
-  return server;
-};
-
-// Start the server
-try {
-  startServer();
-} catch (err) {
-  console.error('Failed to start server:', err);
-  process.exit(1);
+// Start server if not being imported
+if (require.main === module) {
+  app.listen(ENV.PORT, () => {
+    console.log(`Server running on port ${ENV.PORT}`);
+    console.log(`Environment: ${ENV.NODE_ENV}`);
+    console.log(`Client URL: ${ENV.CLIENT_URL}`);
+  });
 }
+
+// Export for Vercel
+module.exports = app;
+module.exports = app;

@@ -8,12 +8,14 @@
   ],
   "routes": [
     {
-      "src": "/api/test-debug",
-      "dest": "index.js"
+      "src": "^/api/test-debug$",
+      "dest": "index.js",
+      "methods": ["GET"]
     },
     {
-      "src": "/api/payments/public-debug",
-      "dest": "index.js"
+      "src": "^/api/payments/public-debug$",
+      "dest": "index.js",
+      "methods": ["GET"]
     },
     {
       "src": "/api/(.*)",
@@ -40,5 +42,8 @@
         { "key": "Access-Control-Allow-Credentials", "value": "true" }
       ]
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 } 

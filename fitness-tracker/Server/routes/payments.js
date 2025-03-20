@@ -81,7 +81,9 @@ router.get('/public-debug', async (req, res) => {
     };
     
     return res.status(200).json({
-      message: 'Public debug information - Updated with additional details',
+      message: 'Public debug information - NEWEST VERSION (v1.0.1)',
+      version: 'v1.0.1',
+      deployedAt: '2024-03-20 22:30',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
       database: {

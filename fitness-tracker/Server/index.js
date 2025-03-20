@@ -132,9 +132,10 @@ app.use(express.json());
 app.get('/api/test-debug', (req, res) => {
   console.log('Test debug endpoint accessed:', new Date().toISOString());
   res.status(200).json({
-    message: 'Test debug endpoint is working',
+    message: 'Test debug endpoint is working - NEWEST VERSION',
     timestamp: new Date().toISOString(),
-    deploymentTime: '2024-03-20',
+    deploymentTime: '2024-03-20 22:30',
+    version: 'v1.0.1',
     environment: process.env.NODE_ENV || 'development',
     mongodb: {
       connectionStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'

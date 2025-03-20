@@ -67,9 +67,11 @@ const UserLogin = () => {
       console.error("Login failed:", error);
       
       // Handle server connection errors
-      if (error.code === 'ERR_NETWORK' || error.message.includes('Cannot connect to server')) {
-        setError("Cannot connect to server. Please check if the server is running.");
-        toast.error("Server connection failed. Please try again later.");
+      if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message.includes('Cannot connect to server')) {
+        setError("Server connection issue. The server might be temporarily unavailable.");
+        toast.error("Connection to server timed out. Please try again later.", {
+          autoClose: 8000 // Keep this message visible for 8 seconds
+        });
       }
       // Handle suspended user
       else if (error.response && error.response.data && error.response.data.isSuspended) {

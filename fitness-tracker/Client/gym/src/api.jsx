@@ -5,8 +5,23 @@ import { resetPortDetection } from './utils/serverPortDetector';
 // Function to get the server URL with the correct port
 export const getServerUrl = () => {
     // Use the environment variable instead of hardcoded localhost
-    console.log('Using API URL from environment:', import.meta.env.VITE_API_URL);
-    return import.meta.env.VITE_API_URL;
+    let apiUrl = import.meta.env.VITE_API_URL;
+    console.log('Raw API URL from environment:', apiUrl);
+    
+    // Ensure the URL starts with http:// or https://
+    if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+        console.warn('API URL does not start with http:// or https://, adding https://');
+        apiUrl = `https://${apiUrl}`;
+    }
+    
+    // Ensure the URL ends with /api for server routes
+    if (!apiUrl.endsWith('/api')) {
+        console.warn('API URL does not end with /api, adding /api suffix');
+        apiUrl = apiUrl.endsWith('/') ? `${apiUrl}api` : `${apiUrl}/api`;
+    }
+    
+    console.log('Using final API URL:', apiUrl);
+    return apiUrl;
 };
 
 // Define API URL constant
@@ -15,7 +30,7 @@ const API_URL = getServerUrl();
 // Initialize API with the server URL
 const API = axios.create({
     baseURL: API_URL,
-    timeout: 10000,
+    timeout: 60000, // Increased to 60 seconds
     withCredentials: true
 });
 
@@ -812,14 +827,14 @@ export const loginUser = async (email, password) => {
         localStorage.removeItem('userId');
         
         // Use the environment variable for the API URL
-        const baseURL = import.meta.env.VITE_API_URL;
+        const baseURL = getServerUrl();
         
         console.log(`Attempting login with server at ${baseURL}`);
         
         // Create a new axios instance for this request
         const loginAPI = axios.create({
             baseURL,
-            timeout: 5000 // Longer timeout for login
+            timeout: 60000 // Increased to 60 seconds
         });
         
         const response = await loginAPI.post('/users/login', { email, password });
@@ -837,8 +852,22 @@ export const loginUser = async (email, password) => {
         }
         
         // Provide a more user-friendly error message for server connection issues
-        if (error.code === 'ERR_NETWORK') {
-            throw new Error('Cannot connect to server. Please check your internet connection and try again.');
+        if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
+            console.warn('Server connection timeout or error. Retrying with longer timeout...');
+            
+            try {
+                // Retry with even longer timeout
+                const retryAPI = axios.create({
+                    baseURL: getServerUrl(),
+                    timeout: 120000 // 120 seconds (2 minutes) for retry
+                });
+                
+                const retryResponse = await retryAPI.post('/users/login', { email, password });
+                return retryResponse;
+            } catch (retryError) {
+                console.error('Retry login failed:', retryError);
+                throw new Error('Server connection failed. The server might be temporarily unavailable. Please try again later.');
+            }
         }
         
         throw error;
@@ -848,14 +877,14 @@ export const loginUser = async (email, password) => {
 export const registerUser = async (data) => {
     try {
         // Use the environment variable for the API URL
-        const baseURL = import.meta.env.VITE_API_URL;
+        const baseURL = getServerUrl();
         
         console.log(`Attempting registration with server at ${baseURL}`);
         
         // Create a new axios instance for this request
         const registerAPI = axios.create({
             baseURL,
-            timeout: 10000 // Longer timeout for registration with image upload
+            timeout: 60000 // Increased to 60 seconds
         });
         
         // Log the FormData contents for debugging
@@ -889,19 +918,15 @@ export const registerUser = async (data) => {
             throw new Error(error.response.data.message);
         }
         
-        // Provide a more user-friendly error message for server connection issues
-        if (error.code === 'ERR_NETWORK') {
-            // Try to detect the server port again
+        // Handle connection timeouts and network errors
+        if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
+            console.warn('Server connection timeout or error. Retrying with longer timeout...');
+            
             try {
-                const detectServerPort = (await import('./utils/serverPortDetector')).default;
-                const port = await detectServerPort();
-                console.log(`Detected server on port ${port}, updating API configuration`);
-                
-                // Try the registration again with the new port
-                const newBaseURL = `http://localhost:${port}/api`;
+                // Retry with even longer timeout
                 const retryAPI = axios.create({
-                    baseURL: newBaseURL,
-                    timeout: 10000
+                    baseURL: getServerUrl(),
+                    timeout: 120000 // 120 seconds (2 minutes) for retry
                 });
                 
                 const retryResponse = await retryAPI.post('/users/register', data, {
@@ -911,8 +936,8 @@ export const registerUser = async (data) => {
                 });
                 return retryResponse;
             } catch (retryError) {
-                console.error('Retry failed:', retryError);
-                throw new Error('Server connection failed. Please check your internet connection and try again.');
+                console.error('Retry registration failed:', retryError);
+                throw new Error('Server connection failed. The server might be temporarily unavailable. Please try again later.');
             }
         }
         

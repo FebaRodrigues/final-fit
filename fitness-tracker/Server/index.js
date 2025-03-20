@@ -91,6 +91,30 @@ app.get('/', (req, res) => {
     res.status(200).json({ message: 'Fitness Management System API is running', port: ENV.PORT });
 });
 
+// Add a handler for the /api path
+app.get('/api', (req, res) => {
+    res.status(200).json({ 
+        message: 'API is running!', 
+        environment: ENV.NODE_ENV,
+        endpoints: [
+            '/api/users',
+            '/api/trainers',
+            '/api/admin',
+            '/api/workouts',
+            '/api/nutrition',
+            '/api/memberships',
+            '/api/payments',
+            '/api/appointments',
+            '/api/goals',
+            '/api/health',
+            '/api/notifications',
+            '/api/announcements',
+            '/api/reports'
+        ],
+        documentation: 'Contact the developer for API documentation'
+    });
+});
+
 // Routes
 const userRoutes = require('./routes/users');
 const trainerRoutes = require('./routes/trainerRoutes');

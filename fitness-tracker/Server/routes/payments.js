@@ -67,6 +67,69 @@ router.get('/debug-session', auth(['user']), async (req, res) => {
   }
 });
 
+// Add a public debug endpoint without auth requirement
+router.get('/public-debug', async (req, res) => {
+  try {
+    // Get database health info
+    let dbStatus = 'unknown';
+    let connectionError = null;
+    let otpCollection = null;
+    
+    try {
+      const mongoose = require('mongoose');
+      dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+      
+      if (dbStatus === 'connected') {
+        // Count OTPs in the database
+        const otpCount = await require('../models/OTP').countDocuments();
+        const activeOtpCount = await require('../models/OTP').countDocuments({
+          isUsed: false,
+          expires: { $gt: new Date() }
+        });
+        
+        otpCollection = {
+          totalCount: otpCount,
+          activeCount: activeOtpCount
+        };
+      }
+    } catch (dbErr) {
+      connectionError = dbErr.message;
+      console.error('Database check error:', dbErr);
+    }
+    
+    // Check session store
+    let sessionStore = 'none';
+    if (req.session) {
+      sessionStore = req.session.store ? 'custom' : 'memory';
+      if (req.session.store && req.session.store.constructor) {
+        sessionStore = req.session.store.constructor.name;
+      }
+    }
+    
+    return res.status(200).json({
+      message: 'Public debug information',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: {
+        status: dbStatus,
+        error: connectionError,
+        otpCollection
+      },
+      session: {
+        hasSession: !!req.session,
+        sessionID: req.session?.id || 'none',
+        store: sessionStore
+      }
+    });
+  } catch (error) {
+    console.error('Error in public debug route:', error);
+    return res.status(500).json({ 
+      message: 'Error retrieving debug information',
+      error: error.message
+    });
+  }
+});
+
 // Payment processing routes
 router.post('/', auth(['user']), createPayment);
 router.post('/retry', auth(['user']), createPayment);

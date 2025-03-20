@@ -114,10 +114,11 @@ const sendPaymentOTP = async (req, res) => {
   const { userId, email } = req.body;
   try {
     console.log('Sending OTP with data:', req.body);
-    console.log('Session info:', {
+    const sessionInfo = {
       hasSession: !!req.session,
       sessionID: req.session?.id || 'none'
-    });
+    };
+    console.log('Session info:', sessionInfo);
     
     if (!stripe) {
       throw new Error('Stripe is not properly initialized');
@@ -145,31 +146,45 @@ const sendPaymentOTP = async (req, res) => {
     // Set expiry time (15 minutes)
     const expiryDate = new Date(Date.now() + 15 * 60 * 1000);
     
-    // Save OTP in database
+    // Save OTP in database with stringified objectId to ensure exact matching
+    let dbOtpSaved = false;
+    let dbOtpId = null;
     try {
       // First, invalidate any existing OTPs for this user
-      await OTP.updateMany(
+      const invalidateResult = await OTP.updateMany(
         { userId, isUsed: false },
         { isUsed: true }
       );
+      console.log('Invalidated existing OTPs:', invalidateResult);
       
-      // Create new OTP record
+      // Create new OTP record with string versions of userId and OTP code
       const otpRecord = new OTP({
-        userId,
+        userId: userId.toString(),
         code: otp.toString(),
         expires: expiryDate,
         purpose: 'payment',
         email: emailToUse
       });
       
-      await otpRecord.save();
-      console.log('OTP saved to database:', otpRecord._id);
+      const savedOTP = await otpRecord.save();
+      dbOtpId = savedOTP._id;
+      dbOtpSaved = true;
+      console.log('OTP saved to database:', savedOTP._id);
+      
+      // Verify the OTP was saved correctly by looking it up
+      const verifyOtp = await OTP.findById(savedOTP._id);
+      console.log('OTP verification lookup result:', verifyOtp ? {
+        id: verifyOtp._id,
+        code: verifyOtp.code,
+        userId: verifyOtp.userId
+      } : 'Not found');
     } catch (dbError) {
       console.error('Failed to save OTP to database:', dbError);
       // Continue with session-based OTP as fallback
     }
     
     // Also store OTP in session as backup
+    let sessionOtpSaved = false;
     if (req.session) {
       req.session.otp = { 
         code: otp.toString(), 
@@ -188,6 +203,7 @@ const sendPaymentOTP = async (req, res) => {
               reject(err);
             } else {
               console.log('OTP session saved successfully');
+              sessionOtpSaved = true;
               resolve();
             }
           });
@@ -199,17 +215,32 @@ const sendPaymentOTP = async (req, res) => {
     }
 
     // Send OTP via email
+    let emailSent = false;
     try {
       await sendOTP(emailToUse, otp);
       console.log('OTP email sent successfully to:', emailToUse);
+      emailSent = true;
     } catch (emailError) {
       console.error('Failed to send OTP email:', emailError);
-      return res.status(500).json({ message: 'Failed to send OTP email. Please try again.' });
+      return res.status(500).json({ 
+        message: 'Failed to send OTP email. Please try again.',
+        debug: {
+          dbOtpSaved,
+          sessionOtpSaved
+        }
+      });
     }
     
     return res.status(200).json({ 
       message: 'OTP sent successfully',
-      expiresAt: expiryDate.toISOString()
+      expiresAt: expiryDate.toISOString(),
+      debug: {
+        dbOtpSaved,
+        dbOtpId: dbOtpId ? dbOtpId.toString() : null,
+        sessionOtpSaved,
+        emailSent,
+        sessionInfo
+      }
     });
   } catch (error) {
     console.error('Error sending OTP:', error);
@@ -226,31 +257,65 @@ const verifyPaymentOTP = async (req, res) => {
   
   try {
     console.log('Verifying OTP with data:', req.body);
-    console.log('Session details:', {
+    const sessionDebug = {
       hasSession: !!req.session,
       hasOTPinSession: !!(req.session && req.session.otp),
       sessionID: req.session?.id || 'none'
-    });
+    };
+    console.log('Session details:', sessionDebug);
     
     // Validate input
     if (!otp || !userId) {
       console.error('OTP verification failed: Missing required fields', { otp: !!otp, userId: !!userId });
-      return res.status(400).json({ message: 'OTP and userId are required' });
+      return res.status(400).json({ 
+        message: 'OTP and userId are required',
+        debug: { sessionDebug }
+      });
     }
 
     const otpString = otp.toString();
+    const currentTime = new Date();
     let otpValid = false;
     let sessionOtpValid = false;
     let dbOtpValid = false;
+    let dbOTPLookup = null;
+    let sessionOTPDetails = null;
     
     // First try to verify using database OTP (primary method)
     try {
+      console.log(`Looking for OTP in database with userId: ${userId}, code: ${otpString}`);
+      
+      // Log all active OTPs for this user for debugging
+      const allUserOTPs = await OTP.find({ 
+        userId: userId
+      });
+      
+      console.log(`Found ${allUserOTPs.length} OTPs for user ${userId} in database:`, 
+        allUserOTPs.map(o => ({
+          id: o._id, 
+          code: o.code, 
+          isUsed: o.isUsed, 
+          expires: o.expires
+        }))
+      );
+      
       const dbOTP = await OTP.findOne({
         userId,
         code: otpString,
         isUsed: false,
-        expires: { $gt: new Date() }
+        expires: { $gt: currentTime }
       });
+      
+      dbOTPLookup = {
+        found: !!dbOTP,
+        otp: dbOTP ? {
+          id: dbOTP._id,
+          code: dbOTP.code,
+          expires: dbOTP.expires,
+          isUsed: dbOTP.isUsed,
+          isExpired: dbOTP.expires < currentTime
+        } : null
+      };
       
       if (dbOTP) {
         console.log('Valid OTP found in database:', dbOTP._id);
@@ -274,6 +339,17 @@ const verifyPaymentOTP = async (req, res) => {
       console.log('Session OTP data:', JSON.stringify(req.session.otp, null, 2));
       
       const { code, expires, userId: sessionUserId } = req.session.otp;
+      sessionOTPDetails = {
+        hasSessionOTP: true,
+        sessionOTPCode: code,
+        sessionOTPExpires: expires,
+        sessionOTPUserId: sessionUserId,
+        providedOTP: otpString,
+        providedUserId: userId,
+        userIdMatch: sessionUserId === userId,
+        codeMatch: code === otpString,
+        isExpired: new Date(expires) < currentTime
+      };
       
       if (sessionUserId !== userId) {
         console.error('OTP verification failed: User ID mismatch', {
@@ -282,7 +358,6 @@ const verifyPaymentOTP = async (req, res) => {
         });
       } else {
         // Check expiry
-        const currentTime = new Date();
         const expiryTime = new Date(expires);
         
         console.log('OTP expiry check:', {
@@ -311,14 +386,24 @@ const verifyPaymentOTP = async (req, res) => {
       // Clear session OTP regardless of outcome
       delete req.session.otp;
       console.log('Session OTP cleared');
+    } else {
+      sessionOTPDetails = {
+        hasSessionOTP: false
+      };
     }
     
     // If verification failed via both methods
     if (!otpValid) {
       return res.status(400).json({ 
         message: 'Invalid or expired OTP. Please request a new OTP.',
-        dbOtpValid,
-        sessionOtpValid
+        debug: {
+          sessionDebug,
+          dbOTPLookup,
+          sessionOTPDetails,
+          dbOtpValid,
+          sessionOtpValid,
+          timestamp: currentTime.toISOString()
+        }
       });
     }
 

@@ -58,11 +58,52 @@ try {
 // Create the Express app
 const app = express();
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
-console.log('Serving static files from:', path.join(__dirname, 'public'));
+// IMPORTANT: Add direct debug endpoints BEFORE any other middleware
+// These endpoints will be available even if other routes have issues
 
-// Middleware
+// Very simple debug endpoint that doesn't require any imports or middleware
+app.get('/debug', (req, res) => {
+  console.log('Root debug endpoint accessed:', new Date().toISOString());
+  res.status(200).json({
+    message: 'Root debug endpoint is working',
+    timestamp: new Date().toISOString(),
+    version: 'v1.0.2 DIRECT ROUTE',
+  });
+});
+
+// Direct debug endpoint that doesn't rely on the router system
+app.get('/api/direct-debug', (req, res) => {
+  console.log('Direct debug endpoint accessed:', new Date().toISOString());
+  
+  let dbStatus = 'unknown';
+  try {
+    dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  } catch (e) {
+    dbStatus = 'error: ' + e.message;
+  }
+  
+  res.status(200).json({
+    message: 'Direct debug endpoint is working (bypasses router)',
+    timestamp: new Date().toISOString(),
+    version: 'v1.0.2 DIRECT ROUTE',
+    deploymentTime: '2024-03-20 23:00',
+    environment: process.env.NODE_ENV || 'development',
+    mongodb: {
+      connectionStatus: dbStatus
+    },
+    request: {
+      path: req.path,
+      method: req.method,
+      headers: req.headers ? {
+        host: req.headers.host,
+        userAgent: req.headers['user-agent'],
+        referer: req.headers.referer
+      } : 'none'
+    }
+  });
+});
+
+// CORS Configuration - make sure it happens after our direct debug endpoints
 app.use(cors({
   origin: ENV.NODE_ENV === 'production'
     ? [
@@ -181,7 +222,9 @@ app.get('/api', (req, res) => {
             '/api/announcements',
             '/api/reports',
             '/api/test-debug',
-            '/api/payments/public-debug'
+            '/api/payments/public-debug',
+            '/api/direct-debug',
+            '/debug'
         ],
         documentation: 'Contact the developer for API documentation'
     });
@@ -276,7 +319,9 @@ app.all('/api/*', (req, res) => {
     '/api/recipes',
     '/api/spa',
     '/api/payments/public-debug',
-    '/api/test-debug'
+    '/api/test-debug',
+    '/api/direct-debug',
+    '/debug'
   ];
   
   res.status(404).json({
@@ -286,7 +331,9 @@ app.all('/api/*', (req, res) => {
     helpfulEndpoints: [
       '/api/health',
       '/api/payments/public-debug',
-      '/api/test-debug'
+      '/api/test-debug',
+      '/api/direct-debug',
+      '/debug'
     ]
   });
 });

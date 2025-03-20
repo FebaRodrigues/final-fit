@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 // Define OTP schema
 const otpSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.Mixed, // Changed from ObjectId to Mixed to support both string and ObjectId
     ref: 'User',
     required: true
   },
@@ -37,6 +37,10 @@ const otpSchema = new mongoose.Schema({
 
 // Create TTL index on expires field
 otpSchema.index({ expires: 1 }, { expireAfterSeconds: 0 });
+
+// Add a text index on the userId field to make string-based searches more efficient
+otpSchema.index({ userId: 1 });
+otpSchema.index({ code: 1 });
 
 const OTP = mongoose.model('OTP', otpSchema);
 

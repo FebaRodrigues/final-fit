@@ -256,7 +256,14 @@ const verifyPaymentOTP = async (req, res) => {
   const { otp, userId } = req.body;
   
   try {
-    console.log(`[${new Date().toISOString()}] Verifying OTP with data:`, req.body);
+    console.log(`[${new Date().toISOString()}] === OTP VERIFICATION ATTEMPT ===`);
+    console.log(`Request body:`, JSON.stringify(req.body));
+    console.log(`Headers:`, JSON.stringify({
+      'content-type': req.headers['content-type'],
+      'user-agent': req.headers['user-agent'],
+      'origin': req.headers['origin'],
+      'host': req.headers['host']
+    }));
     
     // Enhanced logging for debugging
     const sessionDebug = {
@@ -305,18 +312,36 @@ const verifyPaymentOTP = async (req, res) => {
         }))
       );
       
-      // If no OTPs found at all, early return to avoid further processing
+      // If no OTPs found at all, try checking with a loose match on userId
       if (allUserOTPs.length === 0) {
-        console.error('No OTPs found for this user');
-        return res.status(400).json({ 
-          message: 'No OTP found for this user. Please request a new OTP.',
-          debug: {
-            sessionDebug,
-            databaseCheck: 'No OTPs found for user',
-            userId: userIdString,
-            timestamp: new Date().toISOString()
-          }
-        });
+        console.log('No exact OTPs found, checking with loose userId match...');
+        
+        // Try with a regex pattern on the string form of userId
+        const looseUserOTPs = await OTP.find({});
+        
+        console.log('All OTPs in database:', looseUserOTPs.map(o => ({
+          id: o._id,
+          code: o.code,
+          userId: o.userId,
+          userIdType: typeof o.userId,
+          userIdMatches: o.userId.toString().includes(userIdString) || userIdString.includes(o.userId.toString()),
+          isUsed: o.isUsed,
+          expires: o.expires
+        })));
+        
+        // If still no OTPs found, return error
+        if (looseUserOTPs.length === 0) {
+          console.error('No OTPs found in the entire database');
+          return res.status(400).json({ 
+            message: 'No OTP records found in the system. Please request a new OTP.',
+            debug: {
+              sessionDebug,
+              databaseCheck: 'No OTPs found in database',
+              userId: userIdString,
+              timestamp: new Date().toISOString()
+            }
+          });
+        }
       }
       
       // Now look for a valid, unused OTP

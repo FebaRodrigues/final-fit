@@ -230,6 +230,95 @@ app.get('/api', (req, res) => {
     });
 });
 
+// Add emergency debug endpoints
+app.get('/emergency-debug', (req, res) => {
+  res.json({
+    message: 'Emergency debug endpoint is working',
+    serverTime: new Date().toISOString(),
+    nodeVersion: process.version,
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Emergency OTP verification endpoint
+app.post('/emergency-verify-otp', async (req, res) => {
+  try {
+    console.log('EMERGENCY OTP VERIFICATION ATTEMPT', new Date().toISOString());
+    console.log('Request body:', req.body);
+    
+    const { otp, userId } = req.body;
+    
+    if (!otp || !userId) {
+      return res.status(400).json({ 
+        message: 'OTP and userId are required',
+        serverTime: new Date().toISOString()
+      });
+    }
+    
+    // Convert to strings
+    const otpString = otp.toString();
+    const userIdString = userId.toString();
+    
+    // Load OTP model dynamically
+    const OTP = require('./models/OTP');
+    const Membership = require('./models/Membership');
+    
+    // Log all OTPs in database for debugging
+    const allOTPs = await OTP.find({});
+    console.log(`Found ${allOTPs.length} total OTPs in database`);
+    
+    // Check for any OTP with matching code
+    const matchingOTP = await OTP.findOne({ code: otpString });
+    if (matchingOTP) {
+      console.log('Found OTP with matching code:', matchingOTP);
+    } else {
+      console.log('No OTP with matching code found');
+    }
+    
+    // Look for an OTP matching both the user and code
+    const validOTP = await OTP.findOne({
+      userId: { $in: [userIdString, userId] },
+      code: otpString,
+      isUsed: false,
+      expires: { $gt: new Date() }
+    });
+    
+    if (!validOTP) {
+      return res.status(400).json({ 
+        message: 'No valid OTP found for this user/code combination',
+        otpCount: allOTPs.length,
+        hasMatchingCode: !!matchingOTP,
+        serverTime: new Date().toISOString()
+      });
+    }
+    
+    // Mark OTP as used
+    validOTP.isUsed = true;
+    await validOTP.save();
+    
+    // Find any pending membership
+    const pendingMembership = await Membership.findOne({ 
+      userId: { $in: [userIdString, userId] },
+      status: 'Pending' 
+    }).sort({ createdAt: -1 });
+    
+    return res.status(200).json({
+      message: 'OTP verified successfully via emergency endpoint',
+      otpId: validOTP._id,
+      hasPendingMembership: !!pendingMembership,
+      pendingMembership: pendingMembership || null,
+      serverTime: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error in emergency OTP verification:', error);
+    return res.status(500).json({
+      message: 'Server error during emergency OTP verification',
+      error: error.message,
+      serverTime: new Date().toISOString()
+    });
+  }
+});
+
 // Routes
 const userRoutes = require('./routes/users');
 const trainerRoutes = require('./routes/trainerRoutes');

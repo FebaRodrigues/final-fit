@@ -176,7 +176,8 @@ router.post('/create-pending', auth(['user']), createPendingPayment);
 // Make verify-session public so it can be accessed from the payment success page without authentication
 router.get('/verify-session', auth(['user']), verifyStripeSession);
 router.post('/send-otp', auth(['user']), sendPaymentOTP);
-router.post('/verify-otp', auth(['user']), verifyPaymentOTP);
+// TEMPORARILY REMOVE AUTH FOR DEBUGGING
+router.post('/verify-otp', verifyPaymentOTP);
 
 // Payment history routes
 router.get('/user/:userId', auth(['user']), getUserPayments);

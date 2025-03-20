@@ -16,8 +16,11 @@ const { auth } = require('../middleware/auth');
 const OTP = require('../models/OTP');
 const router = express.Router();
 
-// Add a public debug endpoint without auth requirement - placed at the top for priority
+// PUBLIC DEBUG ENDPOINT - NO AUTH REQUIRED
+// This endpoint provides system status information without requiring authentication
+// Access at: /api/payments/public-debug
 router.get('/public-debug', async (req, res) => {
+  console.log('Public debug endpoint accessed:', new Date().toISOString());
   try {
     // Get database health info
     let dbStatus = 'unknown';
@@ -48,15 +51,37 @@ router.get('/public-debug', async (req, res) => {
     
     // Check session store
     let sessionStore = 'none';
+    let sessionInfo = null;
+    
     if (req.session) {
       sessionStore = req.session.store ? 'custom' : 'memory';
       if (req.session.store && req.session.store.constructor) {
         sessionStore = req.session.store.constructor.name;
       }
+      
+      // Add basic session info without exposing sensitive data
+      sessionInfo = {
+        id: req.session.id || 'none',
+        new: req.session.new || false,
+        cookieOptions: {
+          maxAge: req.session.cookie?.maxAge || 'not set',
+          secure: req.session.cookie?.secure || false,
+          httpOnly: req.session.cookie?.httpOnly || false
+        }
+      };
     }
     
+    // Get server info
+    const serverInfo = {
+      nodeVersion: process.version,
+      platform: process.platform,
+      uptime: Math.floor(process.uptime()) + ' seconds',
+      memoryUsage: process.memoryUsage().rss / 1024 / 1024 + ' MB',
+      timestamp: new Date().toISOString()
+    };
+    
     return res.status(200).json({
-      message: 'Public debug information',
+      message: 'Public debug information - Updated with additional details',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
       database: {
@@ -66,15 +91,27 @@ router.get('/public-debug', async (req, res) => {
       },
       session: {
         hasSession: !!req.session,
-        sessionID: req.session?.id || 'none',
-        store: sessionStore
+        storeType: sessionStore,
+        info: sessionInfo
+      },
+      server: serverInfo,
+      request: {
+        ip: req.ip || 'unknown',
+        method: req.method,
+        path: req.path,
+        headers: {
+          'user-agent': req.headers['user-agent'] || 'none',
+          'content-type': req.headers['content-type'] || 'none',
+          'origin': req.headers['origin'] || 'none'
+        }
       }
     });
   } catch (error) {
     console.error('Error in public debug route:', error);
     return res.status(500).json({ 
       message: 'Error retrieving debug information',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

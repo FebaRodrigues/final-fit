@@ -58,53 +58,30 @@ try {
 // Create the Express app
 const app = express();
 
-// Setup CORS options with specific routes handling
-const corsOptions = {
-  origin: function(origin, callback) {
-    const allowedOrigins = ['https://final-fit-frontend.vercel.app', 'http://localhost:5173'];
-    // Allow requests with no origin (like mobile apps, curl requests, etc.)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'x-auth-token'],
-  maxAge: 86400 // 24 hours
-};
-
-// Apply CORS middleware
-app.use(cors(corsOptions));
-
-// Handle CORS preflight for all routes
-app.options('*', cors(corsOptions));
-
-// Specific handler for the admin login route
-app.options('/api/admin/login', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://final-fit-frontend.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400');
-  res.status(204).end();
-});
-
-// Backup CORS headers for any route that might bypass the CORS middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://final-fit-frontend.vercel.app');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
-  res.header('Access-Control-Max-Age', '86400');
-
-  // Handle preflight requests
+// Simple CORS setup for all origins
+app.use(function(req, res, next) {
+  // Allow the frontend origin
+  res.setHeader('Access-Control-Allow-Origin', 'https://final-fit-frontend.vercel.app');
+  
+  // Request methods you wish to allow
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  
+  // Request headers you wish to allow
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization,x-auth-token');
+  
+  // Set to true if you need the website to include cookies in the requests
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  // Set max age for preflight requests
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
-    console.log(`OPTIONS request received from ${req.headers.origin} for ${req.path}`);
+    console.log(`OPTIONS preflight request from ${req.headers.origin} for path: ${req.path}`);
     return res.status(204).end();
   }
+  
+  // Pass to next layer of middleware
   next();
 });
 

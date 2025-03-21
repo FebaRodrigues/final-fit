@@ -24,15 +24,13 @@ const connectDB = async () => {
         
         // Set mongoose options for better connection handling in serverless environments
         const options = {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 5000, // Reduced timeout for serverless
-            connectTimeoutMS: 5000,         // Reduced connection timeout
-            socketTimeoutMS: 30000,         // Reduced socket timeout
-            maxPoolSize: 10,                // Limit connection pool for serverless
-            minPoolSize: 5,                 // Maintain minimum connections
-            maxIdleTimeMS: 10000,           // Close idle connections after 10 seconds
-            bufferCommands: false,          // Disable buffering for faster connect-close cycles
+            serverSelectionTimeoutMS: 15000,  // Increased from 5000 to 15000 (15s)
+            connectTimeoutMS: 15000,          // Increased from 5000 to 15000 (15s)
+            socketTimeoutMS: 45000,           // Increased from 30000 to 45000 (45s)
+            maxPoolSize: 10,                  // Limit connection pool for serverless
+            minPoolSize: 5,                   // Maintain minimum connections
+            maxIdleTimeMS: 10000,             // Close idle connections after 10 seconds
+            bufferCommands: false,            // Disable buffering for faster connect-close cycles
         };
         
         // Display connection details (with sensitive parts masked)
@@ -47,9 +45,9 @@ const connectDB = async () => {
         try {
             console.log('Attempting direct MongoClient connection...');
             const client = new MongoClient(mongoUri, {
-                serverSelectionTimeoutMS: 5000,
-                connectTimeoutMS: 5000,
-                socketTimeoutMS: 30000,
+                serverSelectionTimeoutMS: 15000,  // Increased timeout
+                connectTimeoutMS: 15000,          // Increased timeout
+                socketTimeoutMS: 45000,           // Increased timeout
             });
             
             await client.connect();
@@ -85,7 +83,7 @@ const connectDB = async () => {
                 retries--;
                 if (retries === 0) throw err; // No more retries, propagate error
                 console.log(`Connection attempt failed, retrying... (${retries} attempts left)`);
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry (increased from 1s)
             }
         }
         

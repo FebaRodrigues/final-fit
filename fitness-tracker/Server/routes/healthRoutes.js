@@ -100,34 +100,69 @@ router.get('/db-check', async (req, res) => {
   }
 
   try {
-    // Try to get direct MongoDB client connection
-    const { getDb, getClient, isMongooseReady, isDirect } = require('../config/db');
+    // Try different methods to validate MongoDB connection
     let connected = false;
     let method = 'unknown';
     let database = 'unknown';
+    let error = null;
     
-    if (isDirect()) {
-      const db = getDb();
-      if (db) {
-        connected = true;
-        method = 'direct-client';
-        database = db.databaseName;
+    // Method 1: Check direct MongoDB connection
+    try {
+      const { getDb, isDirect } = require('../config/db');
+      
+      if (isDirect && typeof isDirect === 'function' && isDirect()) {
+        try {
+          const db = getDb();
+          if (db) {
+            // Try a ping to validate connection
+            await db.command({ ping: 1 });
+            connected = true;
+            method = 'direct-client';
+            database = db.databaseName;
+          }
+        } catch (dbError) {
+          error = `Direct client error: ${dbError.message}`;
+        }
       }
-    } else if (isMongooseReady()) {
-      connected = true;
-      method = 'mongoose';
-      database = mongoose.connection.name;
+    } catch (directError) {
+      error = directError.message;
     }
     
-    res.status(200).json({
+    // Method 2: Check mongoose connection if direct client didn't work
+    if (!connected) {
+      try {
+        if (mongoose.connection.readyState === 1) {
+          try {
+            // Try a ping to validate mongoose connection
+            await mongoose.connection.db.admin().command({ ping: 1 });
+            connected = true;
+            method = 'mongoose';
+            database = mongoose.connection.db.databaseName;
+          } catch (pingError) {
+            error = `Mongoose ping error: ${pingError.message}`;
+          }
+        } else {
+          error = `Mongoose not connected (state: ${mongoose.connection.readyState})`;
+        }
+      } catch (mongooseError) {
+        error = `Mongoose error: ${mongooseError.message}`;
+      }
+    }
+    
+    // Return detailed connection status
+    return res.status(200).json({
       connected,
       method,
-      database
+      database,
+      error,
+      mongooseState: mongoose.connection.readyState,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       connected: false,
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

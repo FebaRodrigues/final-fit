@@ -6,6 +6,10 @@
       "use": "@vercel/node"
     }
   ],
+  "env": {
+    "NODE_ENV": "production",
+    "CLIENT_URL": "https://final-fit-frontend.vercel.app"
+  },
   "routes": [
     {
       "src": "/(.*)",

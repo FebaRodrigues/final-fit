@@ -6,20 +6,15 @@
       "use": "@vercel/node"
     }
   ],
-  "env": {
-    "NODE_ENV": "production",
-    "CLIENT_URL": "https://final-fit-frontend.vercel.app"
-  },
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "vercel-server.js",
+      "dest": "/vercel-server.js",
       "headers": {
         "Access-Control-Allow-Origin": "https://final-fit-frontend.vercel.app",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "X-Requested-With,Content-Type,Authorization,x-auth-token",
-        "Access-Control-Allow-Credentials": "true",
-        "Access-Control-Max-Age": "86400"
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Authorization, x-auth-token",
+        "Access-Control-Allow-Credentials": "true"
       }
     }
   ]

@@ -30,20 +30,19 @@ if (!ENV.MONGO_URI) {
   process.exit(1);
 }
 
-// Connect to MongoDB
-connectDB();
-
-// Initialize MongoStore for session storage
-const store = MongoStore.create({
-  mongoUrl: ENV.MONGO_URI,
-  ttl: 60 * 60, // 1 hour session timeout
-  autoRemove: 'native', // Use MongoDB's TTL index
-  touchAfter: 24 * 3600, // Only update the session once per day unless data changes
-  crypto: {
-    secret: ENV.SESSION_SECRET // Encrypt session data
-  },
-  collectionName: 'sessions' // Specify collection name
-});
+// Initialize MongoStore configuration but defer creation until DB is connected
+const getMongoStore = () => {
+  return MongoStore.create({
+    mongoUrl: ENV.MONGO_URI,
+    ttl: 60 * 60, // 1 hour session timeout
+    autoRemove: 'native', // Use MongoDB's TTL index
+    touchAfter: 24 * 3600, // Only update the session once per day unless data changes
+    crypto: {
+      secret: ENV.SESSION_SECRET // Encrypt session data
+    },
+    collectionName: 'sessions' // Specify collection name
+  });
+};
 
 // Initialize Stripe with the secret key
 let stripe;
@@ -117,20 +116,6 @@ app.use(cors({
   maxAge: 86400 // 24 hours
 }));
 
-// Session configuration
-app.use(session({
-  secret: ENV.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  store: store,
-  cookie: { 
-    secure: ENV.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours in milliseconds
-  }
-}));
-
 // Parse raw body for Stripe webhooks
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
@@ -161,7 +146,11 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok',
     environment: ENV.NODE_ENV,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    mongodb: {
+      connectionStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      database: mongoose.connection.db?.databaseName || 'not connected'
+    }
   });
 });
 
@@ -208,385 +197,133 @@ app.get('/emergency-debug', (req, res) => {
   });
 });
 
-// Add a new direct OTP generator endpoint right after the emergency-debug endpoint
-app.get('/generate-new-otp/:userId', async (req, res) => {
+// CRITICAL: First establish database connection, then initialize session middleware and routes
+const startServer = async () => {
   try {
-    console.log('New OTP generator endpoint accessed:', new Date().toISOString());
+    // Wait for the database connection before proceeding
+    console.log('Establishing MongoDB connection before starting server...');
+    await connectDB();
+    console.log('MongoDB connection established successfully');
     
-    const userId = req.params.userId;
-    if (!userId) {
-      return res.status(400).json({
-        message: 'userId parameter is required',
-        serverTime: new Date().toISOString()
-      });
-    }
+    // Now that the database is connected, initialize the session store
+    const store = getMongoStore();
     
-    // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiryDate = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    // Session configuration - initialize after DB connection
+    app.use(session({
+      secret: ENV.SESSION_SECRET,
+      resave: false,
+      saveUninitialized: false,
+      store: store,
+      cookie: { 
+        secure: ENV.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+      }
+    }));
     
-    // Directly create an OTP in the database
-    const OTP = require('./models/OTP');
+    // Add a new direct OTP generator endpoint right after the emergency-debug endpoint
+    app.get('/generate-new-otp/:userId', async (req, res) => {
+      try {
+        console.log('New OTP generator endpoint accessed:', new Date().toISOString());
+        
+        const userId = req.params.userId;
+        if (!userId) {
+          return res.status(400).json({
+            message: 'userId parameter is required',
+            serverTime: new Date().toISOString()
+          });
+        }
+        
+        // Generate a 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiryDate = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        
+        // Directly create an OTP in the database
+        const OTP = require('./models/OTP');
+        
+        try {
+          // First invalidate existing OTPs
+          await OTP.updateMany(
+            { userId: { $in: [userId.toString(), userId] }, isUsed: false },
+            { isUsed: true }
+          );
+          
+          // Create new OTP
+          const otpRecord = new OTP({
+            userId: userId.toString(),
+            code: otp,
+            expires: expiryDate,
+            purpose: 'payment',
+            email: 'test@example.com' // Dummy email since we're not actually sending it
+          });
+          
+          const savedOTP = await otpRecord.save();
+          
+          // Check if it was saved correctly
+          const verifyOtp = await OTP.findOne({
+            userId: userId.toString(),
+            code: otp,
+            isUsed: false
+          });
+          
+          if (!verifyOtp) {
+            return res.status(500).json({
+              message: 'Failed to save OTP',
+              serverTime: new Date().toISOString()
+            });
+          }
+          
+          return res.status(200).json({
+            message: 'OTP generated successfully',
+            otp: otp, // Return OTP directly in response (for testing only)
+            expiryDate: expiryDate,
+            userId: userId,
+            serverTime: new Date().toISOString()
+          });
+          
+        } catch (dbError) {
+          console.error('Database error generating OTP:', dbError);
+          return res.status(500).json({
+            message: 'Database error generating OTP',
+            error: dbError.message,
+            serverTime: new Date().toISOString()
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error generating OTP:', error);
+        return res.status(500).json({
+          message: 'Error generating OTP',
+          error: error.message,
+          serverTime: new Date().toISOString()
+        });
+      }
+    });
     
-    try {
-      // First invalidate existing OTPs
-      await OTP.updateMany(
-        { userId: { $in: [userId.toString(), userId] }, isUsed: false },
-        { isUsed: true }
-      );
-      
-      // Create new OTP
-      const otpRecord = new OTP({
-        userId: userId.toString(),
-        code: otp,
-        expires: expiryDate,
-        purpose: 'payment',
-        email: 'test@example.com' // Dummy email since we're not actually sending it
-      });
-      
-      const savedOTP = await otpRecord.save();
-      
-      // Check if it was saved correctly
-      const verifyOtp = await OTP.findOne({
-        userId: userId.toString(),
-        code: otp,
-        isUsed: false
-      });
-      
-      // Return the OTP details
-      return res.status(200).json({
-        message: 'New OTP generated successfully',
-        otp: otp,
-        userId: userId.toString(),
-        expiresAt: expiryDate.toISOString(),
-        savedToDatabase: !!verifyOtp,
-        otpId: savedOTP._id.toString(),
-        serverTime: new Date().toISOString()
-      });
-    } catch (dbError) {
-      console.error('Database error in OTP generator:', dbError);
-      return res.status(500).json({
-        message: 'Error creating OTP',
-        error: dbError.message,
-        serverTime: new Date().toISOString()
-      });
-    }
+    // Import and register routes here
+    // Define routes to avoid circular dependencies
+    const userRoutes = require('./routes/userRoutes');
+    const adminRoutes = require('./routes/adminRoutes');
+    
+    // Register routes after DB connection is established
+    app.use('/api/users', userRoutes);
+    app.use('/api/admin', adminRoutes);
+
+    // Start the Express server
+    app.listen(ENV.PORT, () => {
+      console.log(`Server running on port ${ENV.PORT}`);
+      console.log(`API available at: http://localhost:${ENV.PORT}/api`);
+      console.log(`Health check at: http://localhost:${ENV.PORT}/api/health`);
+      console.log(`MongoDB connection status: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
+      console.log(`Connected to database: ${mongoose.connection.db?.databaseName || 'unknown'}`);
+    });
+    
   } catch (error) {
-    console.error('Error in OTP generator endpoint:', error);
-    return res.status(500).json({
-      message: 'Server error',
-      error: error.message,
-      serverTime: new Date().toISOString()
-    });
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-});
+};
 
-// Emergency OTP verification endpoint
-app.post('/emergency-verify-otp', async (req, res) => {
-  try {
-    console.log('EMERGENCY OTP VERIFICATION ATTEMPT', new Date().toISOString());
-    console.log('Request body:', req.body);
-    
-    const { otp, userId } = req.body;
-    
-    if (!otp || !userId) {
-      return res.status(400).json({ 
-        message: 'OTP and userId are required',
-        serverTime: new Date().toISOString()
-      });
-    }
-    
-    // Convert to strings
-    const otpString = otp.toString();
-    const userIdString = userId.toString();
-    
-    // Load OTP model dynamically
-    const OTP = require('./models/OTP');
-    const Membership = require('./models/Membership');
-    
-    // Log all OTPs in database for debugging
-    const allOTPs = await OTP.find({});
-    console.log(`Found ${allOTPs.length} total OTPs in database`);
-    
-    // Check for any OTP with matching code
-    const matchingOTP = await OTP.findOne({ code: otpString });
-    if (matchingOTP) {
-      console.log('Found OTP with matching code:', matchingOTP);
-    } else {
-      console.log('No OTP with matching code found');
-    }
-    
-    // Look for an OTP matching both the user and code
-    const validOTP = await OTP.findOne({
-      userId: { $in: [userIdString, userId] },
-      code: otpString,
-      isUsed: false,
-      expires: { $gt: new Date() }
-    });
-    
-    if (!validOTP) {
-      return res.status(400).json({ 
-        message: 'No valid OTP found for this user/code combination',
-        otpCount: allOTPs.length,
-        hasMatchingCode: !!matchingOTP,
-        serverTime: new Date().toISOString()
-      });
-    }
-    
-    // Mark OTP as used
-    validOTP.isUsed = true;
-    await validOTP.save();
-    
-    // Find any pending membership
-    const pendingMembership = await Membership.findOne({ 
-      userId: { $in: [userIdString, userId] },
-      status: 'Pending' 
-    }).sort({ createdAt: -1 });
-    
-    return res.status(200).json({
-      message: 'OTP verified successfully via emergency endpoint',
-      otpId: validOTP._id,
-      hasPendingMembership: !!pendingMembership,
-      pendingMembership: pendingMembership || null,
-      serverTime: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error in emergency OTP verification:', error);
-    return res.status(500).json({
-      message: 'Server error during emergency OTP verification',
-      error: error.message,
-      serverTime: new Date().toISOString()
-    });
-  }
-});
-
-// Add a new direct OTP verification endpoint
-app.post('/verify-any-otp', async (req, res) => {
-  try {
-    console.log('Direct OTP verification endpoint accessed:', new Date().toISOString());
-    console.log('Request body:', req.body);
-    
-    const { otp, userId } = req.body;
-    
-    if (!otp) {
-      return res.status(400).json({
-        message: 'OTP is required',
-        serverTime: new Date().toISOString()
-      });
-    }
-    
-    // Convert values to strings
-    const otpString = otp.toString();
-    const userIdString = userId ? userId.toString() : null;
-    
-    // Load OTP model
-    const OTP = require('./models/OTP');
-    
-    // Get all available OTPs 
-    const allOTPs = await OTP.find({}).sort({ createdAt: -1 }).limit(10);
-    
-    // Find OTPs that match the provided code
-    const matchingOTPs = await OTP.find({ code: otpString });
-    
-    // Check if there's any valid OTP with this code (unused and not expired)
-    const validOTP = await OTP.findOne({
-      code: otpString,
-      isUsed: false,
-      expires: { $gt: new Date() }
-    });
-    
-    // If we have a userId, also try to find an OTP specifically for this user
-    let userSpecificOTP = null;
-    if (userIdString) {
-      userSpecificOTP = await OTP.findOne({
-        userId: { $in: [userIdString, userId] },
-        isUsed: false,
-        expires: { $gt: new Date() }
-      });
-    }
-    
-    // If we found a valid OTP, mark it as used
-    if (validOTP) {
-      validOTP.isUsed = true;
-      await validOTP.save();
-    }
-    
-    return res.status(200).json({
-      message: 'OTP verification check completed',
-      otpProvided: otpString,
-      userIdProvided: userIdString,
-      recentOTPs: allOTPs.map(o => ({
-        id: o._id,
-        code: o.code,
-        userId: o.userId,
-        isUsed: o.isUsed,
-        expires: o.expires,
-        isExpired: o.expires < new Date()
-      })),
-      matchingOTPsFound: matchingOTPs.length,
-      validOTPFound: !!validOTP,
-      userSpecificOTPFound: !!userSpecificOTP,
-      verification: {
-        success: !!validOTP,
-        method: validOTP ? 'any_matching_code' : 'not_found',
-        otpDetails: validOTP ? {
-          id: validOTP._id,
-          userId: validOTP.userId,
-          createdAt: validOTP.createdAt
-        } : null
-      },
-      serverTime: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error in direct OTP verification endpoint:', error);
-    return res.status(500).json({
-      message: 'Server error in OTP verification',
-      error: error.message,
-      serverTime: new Date().toISOString()
-    });
-  }
-});
-
-// Add a version endpoint at the root level for quick verification
-app.get('/version', (req, res) => {
-  res.json({
-    version: 'v1.0.2',
-    deployedAt: new Date().toISOString(),
-    message: 'OTP fix version with direct endpoints',
-    features: [
-      'Direct OTP generation', 
-      'Universal OTP verification', 
-      'Enhanced error handling',
-      'Session-independent OTP checking'
-    ]
-  });
-});
-
-// Routes
-const userRoutes = require('./routes/users');
-const trainerRoutes = require('./routes/trainerRoutes');
-const adminRoutes = require('./routes/adminRoutes2');
-const workoutRoutes = require('./routes/workouts');
-const nutritionRoutes = require('./routes/nutrition');
-const membershipRoutes = require('./routes/memberships');
-const paymentRoutes = require('./routes/payments');
-const appointmentRoutes = require('./routes/appointments');
-const goalRoutes = require('./routes/goals');
-const healthRoutes = require('./routes/healthRoutes');
-const notificationRoutes = require('./routes/notifications');
-const announcementRoutes = require('./routes/announcements');
-const reportRoutes = require('./routes/reports');
-const workoutProgramRoutes = require('./routes/workout-programs');
-const reminderRoutes = require('./routes/reminders');
-const workoutLogRoutes = require('./routes/workoutLogs');
-const nutritionPlanRoutes = require('./routes/nutritionPlans');
-const analyticsRoutes = require('./routes/analytics');
-const progressReportRoutes = require('./routes/progressReports');
-const trainerPaymentRoutes = require('./routes/trainerPayments');
-// Add food database and recipe routes
-const foodDatabaseRoutes = require('./routes/foodDatabase');
-const recipeRoutes = require('./routes/recipes');
-// Add SPA routes
-const spaRoutes = require('./routes/spa');
-
-console.log('All routes loaded successfully');
-
-// API routes
-app.use('/api/users', userRoutes);
-app.use('/api/trainers', trainerRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/workouts', workoutRoutes);
-app.use('/api/nutrition', nutritionRoutes);
-app.use('/api/memberships', membershipRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/appointments', appointmentRoutes);
-app.use('/api/goals', goalRoutes);
-app.use('/api/health', healthRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/announcements', announcementRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/workout-programs', workoutProgramRoutes);
-app.use('/api/reminders', reminderRoutes);
-app.use('/api/workout-logs', workoutLogRoutes);
-app.use('/api/nutrition-plans', nutritionPlanRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/progress-reports', progressReportRoutes);
-app.use('/api/trainer-payments', trainerPaymentRoutes);
-// Add food database and recipe routes
-app.use('/api/food-database', foodDatabaseRoutes);
-app.use('/api/recipes', recipeRoutes);
-// Add SPA routes
-app.use('/api/spa', spaRoutes);
-
-console.log('All routes registered successfully');
-
-// Add a catch-all route at the end to handle any invalid API routes
-app.all('/api/*', (req, res) => {
-  // Extract the path that was tried
-  const attemptedPath = req.path;
-  
-  // List available valid endpoints
-  const availableEndpoints = [
-    '/api/users',
-    '/api/trainers',
-    '/api/admin',
-    '/api/workouts',
-    '/api/nutrition',
-    '/api/memberships',
-    '/api/payments',
-    '/api/appointments',
-    '/api/goals',
-    '/api/health',
-    '/api/notifications',
-    '/api/announcements',
-    '/api/reports',
-    '/api/workout-programs',
-    '/api/reminders',
-    '/api/workout-logs',
-    '/api/nutrition-plans',
-    '/api/analytics',
-    '/api/progress-reports',
-    '/api/trainer-payments',
-    '/api/food-database',
-    '/api/recipes',
-    '/api/spa',
-    '/api/payments/public-debug',
-    '/api/test-debug',
-    '/api/direct-debug',
-    '/debug'
-  ];
-  
-  res.status(404).json({
-    error: `Cannot ${req.method} ${attemptedPath}`,
-    message: 'The requested API endpoint does not exist or you may not have permission to access it.',
-    availableEndpoints,
-    helpfulEndpoints: [
-      '/api/health',
-      '/api/payments/public-debug',
-      '/api/test-debug',
-      '/api/direct-debug',
-      '/debug'
-    ]
-  });
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Internal Server Error',
-    error: ENV.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
-// Start server if not being imported
-if (require.main === module) {
-  app.listen(ENV.PORT, () => {
-    console.log(`Server running on port ${ENV.PORT}`);
-    console.log(`Environment: ${ENV.NODE_ENV}`);
-    console.log(`Client URL: ${ENV.CLIENT_URL}`);
-  });
-}
-
-// Export for Vercel serverless functions
-module.exports = app;
+// Start the server
+startServer();

@@ -216,17 +216,120 @@ exports.registerAdmin = async (req, res) => {
 // Login admin
 exports.loginAdmin = async (req, res) => {
     const { email, password } = req.body; // Use email for login
+    console.log(`Admin login attempt for: ${email}`);
 
     try {
-        const admin = await Admin.findOne({ email }); // Check Admin model by email
-        if (!admin || !(await bcrypt.compare(password, admin.password))) {
+        // Check if email and password are provided
+        if (!email || !password) {
+            return res.status(400).json({ 
+                message: 'Email and password are required',
+                providedFields: { email: !!email, password: !!password }
+            });
+        }
+
+        // Get database connection helper functions
+        const dbModule = require('../config/db');
+        const { getDb, isDirect, isMongooseReady } = dbModule;
+
+        let admin = null;
+        
+        // Try direct MongoDB client approach first for faster response
+        try {
+            if (isDirect()) {
+                console.log('Using direct MongoDB client for admin login');
+                const db = getDb();
+                admin = await db.collection('admins').findOne({ email });
+                console.log(`Direct client admin lookup result: ${!!admin}`);
+            } else if (isMongooseReady()) {
+                // If direct approach is not available, use Mongoose
+                console.log('Using Mongoose for admin login');
+                const Admin = require('../models/Admin');
+                admin = await Admin.findOne({ email });
+                console.log(`Mongoose admin lookup result: ${!!admin}`);
+            } else {
+                throw new Error('No database connection available');
+            }
+        } catch (dbError) {
+            console.error('Database error in admin login:', dbError.message);
+            // Try importing and using the Admin model directly as fallback
+            try {
+                console.log('Trying Admin model as final fallback');
+                const Admin = require('../models/Admin');
+                
+                // Force connection to be established
+                if (!isMongooseReady()) {
+                    console.log('Mongoose not ready, forcing connection');
+                    await dbModule(); // Call the main connect function
+                }
+                
+                admin = await Admin.findOne({ email });
+                console.log(`Fallback admin lookup result: ${!!admin}`);
+            } catch (modelError) {
+                console.error('Model error in admin login:', modelError.message);
+                return res.status(500).json({ 
+                    error: 'Database connection error. Please try again later.',
+                    details: modelError.message
+                });
+            }
+        }
+
+        // Check if admin exists and password matches
+        if (!admin) {
+            console.log(`Admin not found for email: ${email}`);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ id: admin._id, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '1h' });
-        res.json({ token, role: 'admin' }); // Ensure role is set to 'admin'
+        // Compare password
+        const bcrypt = require('bcryptjs');
+        const jwt = require('jsonwebtoken');
+        
+        const passwordMatch = await bcrypt.compare(password, admin.password);
+        if (!passwordMatch) {
+            console.log(`Invalid password for admin: ${email}`);
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        // Create and sign JWT token
+        const token = jwt.sign(
+            { id: admin._id.toString(), role: 'admin' }, 
+            process.env.JWT_SECRET || 'fallback-secret-key',
+            { expiresIn: process.env.JWT_EXPIRE || '1h' }
+        );
+
+        // Update last login time in background
+        try {
+            if (isDirect()) {
+                const db = getDb();
+                db.collection('admins').updateOne(
+                    { _id: admin._id },
+                    { $set: { lastLogin: new Date() } }
+                ).catch(err => console.error('Error updating last login time:', err));
+            } else if (isMongooseReady()) {
+                const Admin = require('../models/Admin');
+                Admin.findByIdAndUpdate(
+                    admin._id,
+                    { $set: { lastLogin: new Date() } }
+                ).catch(err => console.error('Error updating last login time:', err));
+            }
+        } catch (updateError) {
+            console.error('Error updating last login time:', updateError);
+            // Non-critical error, continue
+        }
+
+        console.log(`Admin login successful for: ${email}`);
+        res.json({ 
+            token,
+            role: 'admin',
+            name: admin.name,
+            email: admin.email,
+            id: admin._id.toString()
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error in admin login:', error);
+        res.status(500).json({ 
+            error: error.message,
+            message: 'Server error during login'
+        });
     }
 };
 

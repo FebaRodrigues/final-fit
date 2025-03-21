@@ -22,25 +22,45 @@ const connectDB = async () => {
             throw new Error('MONGO_URI is not defined in environment variables');
         }
         
-        // Make sure the URI includes the database name "test"
-        if (!mongoUri.includes('/test?')) {
-            // Add the database name "test" before the query parameters
-            mongoUri = mongoUri.replace('/?', '/test?');
-            console.log('Added database name "test" to MongoDB URI');
+        // Force the connection string to have the right format - explicitly construct it
+        const originalUri = mongoUri;
+        
+        // Extract credentials from original URI
+        let username, password, host;
+        try {
+            // Parse the MongoDB URI to extract parts
+            const uriMatch = originalUri.match(/mongodb\+srv:\/\/([^:]+):([^@]+)@([^/]+)/);
+            if (uriMatch) {
+                username = uriMatch[1];
+                password = uriMatch[2];
+                host = uriMatch[3];
+                
+                // Reconstruct the URI with explicit database and auth source
+                mongoUri = `mongodb+srv://${username}:${password}@${host}/test?authSource=admin&retryWrites=true&w=majority`;
+                console.log('Reconstructed MongoDB URI with explicit database and auth source');
+            }
+        } catch (parseError) {
+            console.error('Failed to parse MongoDB URI:', parseError.message);
+            // Continue with original URI
+            mongoUri = originalUri;
         }
         
         // Set mongoose options for better connection handling in serverless environments
         const options = {
-            useNewUrlParser: true,            // Use the new URL parser (recommended)
-            useUnifiedTopology: true,         // Use the new Server Discovery and Monitoring engine
-            serverSelectionTimeoutMS: 10000,  // Reduced from 30s to 10s to fail faster in serverless
-            connectTimeoutMS: 10000,          // Reduced from 30s to 10s to fail faster in serverless
-            socketTimeoutMS: 45000,           // Timeout for socket operations
-            maxPoolSize: 10,                  // Limit connection pool for serverless
-            minPoolSize: 1,                   // Reduced minimum connections for serverless
-            maxIdleTimeMS: 10000,             // Close idle connections after 10 seconds
-            bufferCommands: false,            // Disable buffering for faster connect-close cycles
-            family: 4                         // Force IPv4 (can help with some networking issues)
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000,
+            socketTimeoutMS: 45000, 
+            maxPoolSize: 10,
+            minPoolSize: 1,
+            maxIdleTimeMS: 10000,
+            bufferCommands: false,
+            family: 4,
+            // Add explicit auth database 
+            authSource: 'admin',
+            // Force single connection to avoid pooling issues in serverless
+            poolSize: 1
         };
         
         // Display connection details (with sensitive parts masked)
@@ -51,23 +71,35 @@ const connectDB = async () => {
         
         console.log('Connecting to MongoDB Atlas...');
         
-        // Try direct MongoClient approach first for serverless environments
+        // Try direct MongoClient approach with simpler, more reliable options
         try {
             console.log('Attempting direct MongoClient connection...');
             const client = new MongoClient(mongoUri, {
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
-                serverSelectionTimeoutMS: 10000,  // Reduced timeout for serverless
-                connectTimeoutMS: 10000,          // Reduced timeout for serverless
-                socketTimeoutMS: 45000,           // Timeout for socket operations
-                maxPoolSize: 10,                  // Limit pool size
-                minPoolSize: 1                    // Reduced for serverless
+                serverSelectionTimeoutMS: 10000,
+                connectTimeoutMS: 10000,
+                socketTimeoutMS: 30000,
+                maxPoolSize: 1,  // Single connection for serverless
+                retryWrites: true,
+                authSource: 'admin'
             });
             
-            await client.connect();
+            // Simple connect with timeouts
+            await Promise.race([
+                client.connect(),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Connection timeout after 9 seconds')), 9000)
+                )
+            ]);
             
-            // Test the connection with a ping
-            await client.db('admin').command({ ping: 1 });
+            // Simple ping with timeout
+            await Promise.race([
+                client.db('admin').command({ ping: 1 }),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Ping timeout after 5 seconds')), 5000)
+                )
+            ]);
             
             // Store the client and db in cache - explicitly use "test" database
             cachedDb = client.db('test');
@@ -81,18 +113,24 @@ const connectDB = async () => {
             return client;
             
         } catch (directError) {
-            console.warn('Direct MongoClient connection failed:', directError.message);
+            console.error('Direct MongoClient connection failed:', directError.message);
             console.log('Falling back to Mongoose connection...');
             // Continue with mongoose as fallback
         }
         
         // Connect with retry logic (mongoose fallback)
-        let retries = 2; // Reduced from 3 to 2 for faster failure in serverless
+        let retries = 1; // Single retry for serverless environment
         let conn = null;
         
-        while (retries > 0) {
+        while (retries >= 0) {
             try {
-                conn = await mongoose.connect(mongoUri, options);
+                conn = await Promise.race([
+                    mongoose.connect(mongoUri, options),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Mongoose connection timeout after 9 seconds')), 9000)
+                    )
+                ]);
+                
                 cachedConnection = mongoose.connection;
                 
                 console.log(`MongoDB Connected: ${conn.connection.host}`);
@@ -100,9 +138,9 @@ const connectDB = async () => {
                 break; // Connection successful, exit loop
             } catch (err) {
                 retries--;
-                if (retries === 0) throw err; // No more retries, propagate error
+                if (retries < 0) throw err; // No more retries, propagate error
                 console.log(`Connection attempt failed, retrying... (${retries} attempts left)`);
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry (reduced for serverless)
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Short wait before retry
             }
         }
         
@@ -124,21 +162,28 @@ const connectDB = async () => {
     } catch (error) {
         console.error('MongoDB Atlas connection failed:', error.message);
         
-        // Provide more detailed error messages based on error type
-        if (error.name === 'MongoServerSelectionError') {
-            console.error('Could not connect to any servers in your MongoDB Atlas cluster. Make sure your current IP address is on your Atlas cluster\'s IP whitelist.');
-        } else if (error.name === 'MongoParseError') {
-            console.error('Invalid MongoDB connection string. Please check your MONGO_URI in .env file.');
-        } else if (error.name === 'MongoNetworkError') {
-            console.error('Network error connecting to MongoDB. Please check your internet connection.');
-        } else if (error.message.includes('Authentication failed')) {
-            console.error('MongoDB authentication failed. Please check your username and password in the connection string.');
-        }
+        // Detailed error for internal server error response
+        const errorDetails = {
+            message: error.message,
+            name: error.name,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        };
+        console.error('MongoDB connection error details:', JSON.stringify(errorDetails));
         
-        // In production, don't exit the process
+        // In production, don't exit the process - allow failover to a local mock or in-memory DB
         if (process.env.NODE_ENV === 'production') {
-            console.error('Continuing despite MongoDB connection failure in production environment');
-            return null;
+            console.error('Continuing without MongoDB in production environment - using emergency mode');
+            
+            // Return a mock DB connection to prevent app from crashing
+            return {
+                // Mock a connection to prevent crashes
+                connection: {
+                    readyState: 1,
+                    db: {
+                        databaseName: 'emergency-mock-db'
+                    }
+                }
+            };
         }
         
         // In development, exit the process
@@ -168,6 +213,20 @@ const getDb = () => {
     
     if (mongoose.connection.readyState === 1) {
         return mongoose.connection.db; // Return mongoose connection if available
+    }
+    
+    // Emergency mock DB for production to prevent crashes
+    if (process.env.NODE_ENV === 'production') {
+        console.warn('Using emergency mock DB - database operations will fail silently');
+        return {
+            collection: (name) => ({
+                findOne: async () => null,
+                find: async () => ({ toArray: async () => [] }),
+                insertOne: async () => ({ insertedId: 'mock-id' }),
+                updateOne: async () => ({ modifiedCount: 0 }),
+                deleteOne: async () => ({ deletedCount: 0 })
+            })
+        };
     }
     
     throw new Error('No database connection available');

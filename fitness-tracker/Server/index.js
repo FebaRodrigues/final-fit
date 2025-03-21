@@ -58,32 +58,18 @@ try {
 // Create the Express app
 const app = express();
 
-// Simple CORS setup for all origins
-app.use(function(req, res, next) {
-  // Allow the frontend origin
-  res.setHeader('Access-Control-Allow-Origin', 'https://final-fit-frontend.vercel.app');
-  
-  // Request methods you wish to allow
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  
-  // Request headers you wish to allow
-  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type,Authorization,x-auth-token');
-  
-  // Set to true if you need the website to include cookies in the requests
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
-  // Set max age for preflight requests
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  // Handle preflight OPTIONS requests
-  if (req.method === 'OPTIONS') {
-    console.log(`OPTIONS preflight request from ${req.headers.origin} for path: ${req.path}`);
-    return res.status(204).end();
-  }
-  
-  // Pass to next layer of middleware
-  next();
-});
+// Simplest possible CORS setup
+const corsOptions = {
+  origin: 'https://final-fit-frontend.vercel.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight OPTIONS requests
+app.options('*', cors(corsOptions));
 
 // Very simple debug endpoint that doesn't require any imports or middleware
 app.get('/debug', (req, res) => {

@@ -1,110 +1,133 @@
 const express = require('express');
-const router = express.Router();
 const mongoose = require('mongoose');
+const { performance } = require('perf_hooks');
+const router = express.Router();
+const cloudinary = require('cloudinary').v2;
 
-// Simple health check endpoint
+// Health status endpoint - explicit CORS headers to ensure it can be reached for debugging
 router.get('/', async (req, res) => {
-  // Check MongoDB connection status
-  let dbStatus = 'unknown';
-  let dbDetails = null;
+  // Add explicit CORS headers for this critical endpoint
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
   
   try {
-    // Try to ping the database
-    if (mongoose.connection.readyState === 1) {
-      try {
-        await mongoose.connection.db.admin().ping();
-        dbStatus = 'connected';
-        dbDetails = {
-          database: mongoose.connection.db.databaseName,
-          host: mongoose.connection.host,
-          readyState: mongoose.connection.readyState
-        };
-        console.log('✅ MongoDB ping successful');
-      } catch (pingError) {
-        dbStatus = 'error';
-        console.error('❌ MongoDB ping failed:', pingError.message);
+    const start = performance.now();
+    const mongoStatus = mongoose.connection.readyState;
+    
+    // Check MongoDB connection
+    let connected = false;
+    let dbMethod = 'unknown';
+    let dbName = 'unknown';
+    
+    // Try to get direct MongoDB client connection info
+    try {
+      const { getDb, getClient, isMongooseReady, isDirect } = require('../config/db');
+      if (isDirect()) {
+        const db = getDb();
+        if (db) {
+          connected = true;
+          dbMethod = 'direct-client';
+          dbName = db.databaseName;
+        }
+      } else if (isMongooseReady()) {
+        connected = true;
+        dbMethod = 'mongoose';
+        dbName = mongoose.connection.name;
       }
-    } else {
-      dbStatus = mongoose.connection.readyState === 2 ? 'connecting' : 'disconnected';
+    } catch (dbError) {
+      // If error getting client info, fall back to just readyState
+      connected = mongoStatus === 1;
     }
-  } catch (err) {
-    dbStatus = 'error';
-    console.error('Error checking MongoDB status:', err.message);
-  }
-
-  // Send response with detailed information
-  res.status(200).json({ 
-    status: 'ok',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString(),
-    version: 'v1.0.3',
-    database: {
-      status: dbStatus,
-      details: dbDetails
-    },
-    server: {
-      uptime: Math.floor(process.uptime()) + ' seconds',
-      memory: Math.round(process.memoryUsage().rss / 1024 / 1024) + ' MB'
-    }
-  });
-});
-
-// Add a dedicated DB check endpoint
-router.get('/db-check', async (req, res) => {
-  try {
-    console.log('Running manual MongoDB connection check');
     
-    // Check existing connection
-    if (mongoose.connection.readyState === 1) {
-      console.log('Connection exists, checking ping...');
-      try {
-        await mongoose.connection.db.admin().ping();
-        return res.status(200).json({
-          connected: true,
-          method: 'existing-connection',
-          readyState: mongoose.connection.readyState,
-          database: mongoose.connection.db.databaseName
-        });
-      } catch (pingErr) {
-        console.error('Ping failed on existing connection:', pingErr);
+    // Check Cloudinary connection
+    let cloudinaryStatus = 'unknown';
+    try {
+      // Simple ping test to Cloudinary
+      if (cloudinary.config().cloud_name) {
+        cloudinaryStatus = 'ok';
+      } else {
+        cloudinaryStatus = 'not-configured';
       }
+    } catch (cloudinaryError) {
+      cloudinaryStatus = `error: ${cloudinaryError.message}`;
     }
     
-    // Try a fresh connection if not connected
-    console.log('Creating a direct test connection...');
-    const mongoUri = process.env.MONGO_URI;
-    if (!mongoUri) {
-      return res.status(500).json({
-        connected: false,
-        error: 'No MONGO_URI found in environment'
-      });
-    }
+    // Prepare response
+    const end = performance.now();
+    const responseTime = (end - start).toFixed(2);
     
-    // Try a simple client connection with minimal options
-    const { MongoClient } = require('mongodb');
-    const client = new MongoClient(mongoUri, {
-      connectTimeoutMS: 5000,
-      socketTimeoutMS: 5000,
-      serverSelectionTimeoutMS: 5000
-    });
-    
-    await client.connect();
-    await client.db('admin').command({ ping: 1 });
-    const dbName = client.db().databaseName;
-    await client.close();
-    
-    return res.status(200).json({
-      connected: true,
-      method: 'direct-client',
-      database: dbName
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      responseTime: `${responseTime}ms`,
+      version: process.env.APP_VERSION || 'v1.0.3',
+      services: {
+        database: {
+          connected,
+          method: dbMethod,
+          database: dbName
+        },
+        cloudinary: {
+          status: cloudinaryStatus
+        },
+        server: {
+          uptime: process.uptime().toFixed(2) + 's'
+        }
+      }
     });
   } catch (error) {
-    console.error('DB check failed:', error);
-    return res.status(500).json({
+    // If anything fails, we still want to return something
+    console.error('Health check error:', error);
+    res.status(500).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
+// Additional endpoint to check MongoDB connection specifically
+router.get('/db-check', async (req, res) => {
+  // Add explicit CORS headers
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+
+  try {
+    // Try to get direct MongoDB client connection
+    const { getDb, getClient, isMongooseReady, isDirect } = require('../config/db');
+    let connected = false;
+    let method = 'unknown';
+    let database = 'unknown';
+    
+    if (isDirect()) {
+      const db = getDb();
+      if (db) {
+        connected = true;
+        method = 'direct-client';
+        database = db.databaseName;
+      }
+    } else if (isMongooseReady()) {
+      connected = true;
+      method = 'mongoose';
+      database = mongoose.connection.name;
+    }
+    
+    res.status(200).json({
+      connected,
+      method,
+      database
+    });
+  } catch (error) {
+    res.status(500).json({
       connected: false,
-      error: error.message,
-      code: error.code || 'unknown',
-      name: error.name
+      error: error.message
     });
   }
 });

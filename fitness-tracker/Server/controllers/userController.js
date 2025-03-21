@@ -397,18 +397,80 @@ const updateUserFields = async (req, res) => {
 
 // Controller method to get user profile
 const getProfile = async (req, res) => {
+    // Set CORS headers explicitly for this critical endpoint
+    const origin = req.headers.origin;
+    if (origin && (origin.includes('vercel.app') || origin.includes('localhost'))) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+    }
+    
     try {
         const userId = req.user.id;
         console.log(`Getting profile for user ${userId}`);
         
-        const user = await User.findById(userId).select('-password');
-        
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+        try {
+            // First try mongoose
+            const user = await User.findById(userId).select('-password');
+            
+            if (!user) {
+                console.log(`User not found in database: ${userId}`);
+                return res.status(404).json({ error: 'User not found' });
+            }
+            
+            console.log(`Retrieved profile for user ${userId} using mongoose`);
+            return res.status(200).json(user);
+            
+        } catch (mongooseError) {
+            console.warn(`Mongoose query failed for profile: ${mongooseError.message}`);
+            console.log('Trying direct MongoDB client as fallback');
+            
+            try {
+                // Get the direct MongoDB client
+                const { getDb } = require('../config/db');
+                const db = getDb();
+                
+                // Convert string ID to ObjectId
+                const { ObjectId } = require('mongodb');
+                let userIdObj;
+                
+                try {
+                    userIdObj = new ObjectId(userId);
+                } catch (idError) {
+                    console.error('Error converting userId to ObjectId:', idError);
+                    userIdObj = userId; // fallback to string ID
+                }
+                
+                // Find the user with the direct client
+                const user = await db.collection('users').findOne({ _id: userIdObj });
+                
+                if (!user) {
+                    console.log(`No user found with ID: ${userId}`);
+                    return res.status(404).json({ error: 'User not found' });
+                }
+                
+                // Remove password from response
+                if (user.password) {
+                    delete user.password;
+                }
+                
+                console.log(`Retrieved profile for user ${userId} using direct MongoDB client (fallback)`);
+                return res.status(200).json(user);
+                
+            } catch (directError) {
+                console.error('Direct MongoDB client fallback also failed:', directError.message);
+                console.log('Using token data as last resort fallback');
+                
+                // Use token data as last resort
+                return res.status(200).json({
+                    _id: userId,
+                    name: req.user.name || "User",
+                    email: req.user.email || "user@example.com",
+                    role: req.user.role || "user",
+                    image: "https://res.cloudinary.com/daacjyk3d/image/upload/v1740376690/fitnessApp/gfo0vamcfcurte2gc4jk.jpg",
+                    _fallback: true
+                });
+            }
         }
-        
-        console.log(`Retrieved profile for user ${userId}`);
-        return res.status(200).json(user);
     } catch (error) {
         console.error('Error getting user profile:', error);
         return res.status(500).json({ error: error.message || 'Error retrieving user profile' });

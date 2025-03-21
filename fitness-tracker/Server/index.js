@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const connectDB = require('./config/db');
 const MongoStore = require('connect-mongo');
+const corsMiddleware = require('./middleware/cors-fix');
 
 // Load environment variables
 console.log('=== Loading Environment Variables ===');
@@ -103,54 +104,39 @@ app.get('/api/direct-debug', (req, res) => {
   });
 });
 
-// CORS Configuration - make sure it happens after our direct debug endpoints
+// First, apply a custom CORS middleware for added flexibility
+app.use(corsMiddleware);
+
+// Then use the standard cors module with proper configuration
 app.use(cors({
-  origin: ENV.NODE_ENV === 'production'
-    ? [
-        'https://final-fit-frontend.vercel.app',
-        ENV.CLIENT_URL,
-        /\.vercel\.app$/,
-        /localhost/
-      ]
-    : ENV.CLIENT_URL,
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    // Whitelist specific origins
+    const whitelist = [
+      'https://final-fit-frontend.vercel.app',
+      'https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app',
+      'https://final-fit-frontend-ev7xv9kct-feba-rodrigues-projects.vercel.app'
+    ];
+    
+    // Check if origin is in whitelist or matches vercel.app or localhost
+    if (
+      whitelist.indexOf(origin) !== -1 || 
+      origin.includes('vercel.app') || 
+      origin.includes('localhost')
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'x-auth-token'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 86400 // 24 hours
 }));
-
-// Add pre-flight OPTIONS handler
-app.options('*', cors());
-
-// Add additional CORS headers for all responses
-app.use((req, res, next) => {
-    // Allow specific frontend domains
-    const allowedOrigins = [
-        'https://final-fit-frontend.vercel.app',
-        'https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app',
-        'https://final-fit-frontend-ev7xv9kct-feba-rodrigues-projects.vercel.app'
-    ];
-    
-    const origin = req.headers.origin;
-    if (origin && (allowedOrigins.includes(origin) || origin.includes('vercel.app') || origin.includes('localhost'))) {
-        res.header('Access-Control-Allow-Origin', origin);
-    } else {
-        // If no origin matches, do not set the header at all
-        // DO NOT use wildcard '*' with credentials
-    }
-    
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-    } else {
-        next();
-    }
-});
 
 // Session configuration
 app.use(session({

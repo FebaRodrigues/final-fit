@@ -313,6 +313,11 @@ const userSchema = new mongoose.Schema({
   goals: [{ type: String }],
   profileCompleted: { type: Boolean, default: false },
   fitnessLevel: { type: String, default: 'beginner' },
+  // Additional user profile fields
+  age: { type: Number },
+  height: { type: Number },
+  weight: { type: Number },
+  gender: { type: String, enum: ['male', 'female', 'other', ''] },
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date }
 });
@@ -759,12 +764,10 @@ app.get('/api/users/profile', authMiddleware, async (req, res) => {
   }
 });
 
-// Update user profile
-app.put('/api/user/profile', authMiddleware, async (req, res) => {
-  console.log('Update user profile endpoint hit:', new Date().toISOString());
+// Update user profile - singular version for backward compatibility
+app.put('/api/user/profile', authMiddleware, upload.single('image'), async (req, res) => {
+  console.log('Update user profile endpoint hit (singular):', new Date().toISOString());
   try {
-    const { name, phone, goals, fitnessLevel } = req.body;
-    
     // Connect to MongoDB
     const connected = await connectDB();
     if (!connected) {
@@ -779,14 +782,39 @@ app.put('/api/user/profile', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Update fields
-    if (name) user.name = name;
-    if (phone) user.phone = phone;
-    if (goals) user.goals = goals;
-    if (fitnessLevel) user.fitnessLevel = fitnessLevel;
+    // Process image if uploaded
+    let imageUrl = user.image;  // Keep existing image by default
+    if (req.file) {
+      imageUrl = `https://via.placeholder.com/150?text=${encodeURIComponent(req.body.name || user.name)}`;
+    }
     
-    // Mark profile as completed if all fields are provided
-    if (name && phone && goals && goals.length > 0 && fitnessLevel) {
+    // Update fields
+    const updateFields = [
+      'name', 'phone', 'goals', 'fitnessLevel', 
+      'age', 'height', 'weight', 'gender', 'membershipType'
+    ];
+    
+    // Apply updates
+    updateFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        // Handle array fields (like goals)
+        if (field === 'goals' && typeof req.body[field] === 'string') {
+          try {
+            user[field] = JSON.parse(req.body[field]);
+          } catch (e) {
+            user[field] = req.body[field].split(',').map(goal => goal.trim());
+          }
+        } else {
+          user[field] = req.body[field];
+        }
+      }
+    });
+    
+    // Set image
+    user.image = imageUrl;
+    
+    // Mark profile as completed if key fields are provided
+    if (user.name && (user.age || req.body.age) && (user.gender || req.body.gender)) {
       user.profileCompleted = true;
     }
     
@@ -795,18 +823,116 @@ app.put('/api/user/profile', authMiddleware, async (req, res) => {
     res.status(200).json({
       message: 'Profile updated successfully',
       user: {
-        id: user._id,
+        id: user._id.toString(),
         name: user.name,
         email: user.email,
-        phone: user.phone,
-        goals: user.goals,
-        fitnessLevel: user.fitnessLevel,
+        phone: user.phone || '',
+        image: user.image,
+        age: user.age || '',
+        height: user.height || '',
+        weight: user.weight || '',
+        gender: user.gender || '',
+        goals: user.goals || [],
+        fitnessLevel: user.fitnessLevel || 'beginner',
         profileCompleted: user.profileCompleted,
+        membershipType: user.membershipType || 'basic',
         role: user.role
-      }
+      },
+      success: true
     });
   } catch (error) {
-    console.error('Update user profile error:', error);
+    console.error('Update user profile error (singular endpoint):', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update user profile - plural version for frontend compatibility
+app.put('/api/users/profile', authMiddleware, upload.single('image'), async (req, res) => {
+  console.log('Update user profile endpoint hit (plural):', new Date().toISOString());
+  try {
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    const User = getModel('User', userSchema);
+    
+    // Find user
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    console.log('Received form data:', {
+      name: req.body.name,
+      hasImage: !!req.file,
+      fields: Object.keys(req.body)
+    });
+    
+    // Process image if uploaded
+    let imageUrl = user.image;  // Keep existing image by default
+    if (req.file) {
+      // In a real production app, you would upload to a service like AWS S3, Cloudinary, etc.
+      // For this example, we'll pretend we saved it and return a dummy URL
+      imageUrl = `https://via.placeholder.com/150?text=${encodeURIComponent(req.body.name || user.name)}`;
+      console.log('Processed new profile image:', imageUrl);
+    }
+    
+    // Update fields
+    const updateFields = [
+      'name', 'phone', 'goals', 'fitnessLevel', 
+      'age', 'height', 'weight', 'gender', 'membershipType'
+    ];
+    
+    // Apply updates
+    updateFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        // Handle array fields (like goals)
+        if (field === 'goals' && typeof req.body[field] === 'string') {
+          try {
+            user[field] = JSON.parse(req.body[field]);
+          } catch (e) {
+            user[field] = req.body[field].split(',').map(goal => goal.trim());
+          }
+        } else {
+          user[field] = req.body[field];
+        }
+      }
+    });
+    
+    // Set image
+    user.image = imageUrl;
+    
+    // Mark profile as completed if key fields are provided
+    if (user.name && (user.age || req.body.age) && (user.gender || req.body.gender)) {
+      user.profileCompleted = true;
+    }
+    
+    await user.save();
+    
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        image: user.image,
+        age: user.age || '',
+        height: user.height || '',
+        weight: user.weight || '',
+        gender: user.gender || '',
+        goals: user.goals || [],
+        fitnessLevel: user.fitnessLevel || 'beginner',
+        profileCompleted: user.profileCompleted,
+        membershipType: user.membershipType || 'basic',
+        role: user.role
+      },
+      success: true
+    });
+  } catch (error) {
+    console.error('Update user profile error (plural endpoint):', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

@@ -29,6 +29,7 @@
     "build": "echo 'Build step completed'",
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "vercel-build": "echo 'Vercel build step completed'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

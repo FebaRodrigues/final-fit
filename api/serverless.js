@@ -31,6 +31,21 @@ app.use((req, res, next) => {
   next();
 });
 
+// Root endpoint - Add this to handle the root path
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'Fitness Management System API',
+    status: 'online',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      api: '/api',
+      adminLogin: '/api/admin/login'
+    }
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 

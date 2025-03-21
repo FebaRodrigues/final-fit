@@ -349,6 +349,50 @@ const membershipSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Define Workout schema inline
+const workoutSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+  title: { type: String, required: true },
+  description: { type: String },
+  exercises: [{
+    name: { type: String, required: true },
+    sets: { type: Number, default: 3 },
+    reps: { type: Number, default: 10 },
+    weight: { type: Number },
+    duration: { type: Number }, // in seconds
+    notes: { type: String }
+  }],
+  duration: { type: Number }, // in minutes
+  date: { type: Date, default: Date.now },
+  type: { type: String, enum: ['strength', 'cardio', 'flexibility', 'balance', 'custom'] },
+  status: { type: String, default: 'planned', enum: ['planned', 'completed', 'missed'] },
+  notes: { type: String },
+  createdAt: { type: Date, default: Date.now }
+});
+
+// Define Meal schema inline
+const mealSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+  date: { type: Date, default: Date.now },
+  type: { type: String, enum: ['breakfast', 'lunch', 'dinner', 'snack'], required: true },
+  name: { type: String, required: true },
+  foods: [{
+    name: { type: String, required: true },
+    calories: { type: Number },
+    protein: { type: Number }, // in grams
+    carbs: { type: Number }, // in grams
+    fat: { type: Number }, // in grams
+    servingSize: { type: String },
+    quantity: { type: Number, default: 1 }
+  }],
+  calories: { type: Number },
+  protein: { type: Number }, // in grams
+  carbs: { type: Number }, // in grams
+  fat: { type: Number }, // in grams
+  notes: { type: String },
+  createdAt: { type: Date, default: Date.now }
+});
+
 // MongoDB Connection
 // =================
 
@@ -1436,6 +1480,558 @@ app.post('/api/memberships/create-mock', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('Create mock membership error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// WORKOUT ROUTES
+// ==============
+
+// Get user workouts
+app.get('/api/workouts/user/:userId', authMiddleware, async (req, res) => {
+  console.log('Get user workouts endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { userId } = req.params;
+    
+    // Basic validation
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+    
+    // Verify user has permission to access these workouts
+    if (req.user.role !== 'admin' && req.user.id !== userId) {
+      return res.status(403).json({ message: 'Not authorized to access these workouts' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Workout = getModel('Workout', workoutSchema);
+    
+    // Optional query parameters
+    const { limit = 10, page = 1, status, type, startDate, endDate } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Build query
+    const query = { userId };
+    if (status) query.status = status;
+    if (type) query.type = type;
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    }
+    
+    // Get workouts
+    const workouts = await Workout.find(query)
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Workout.countDocuments(query);
+    
+    // Format workouts for response
+    const formattedWorkouts = workouts.map(workout => ({
+      id: workout._id.toString(),
+      userId: workout.userId.toString(),
+      title: workout.title,
+      description: workout.description || '',
+      exercises: workout.exercises || [],
+      duration: workout.duration || 0,
+      date: workout.date,
+      type: workout.type || 'custom',
+      status: workout.status,
+      notes: workout.notes || '',
+      createdAt: workout.createdAt
+    }));
+    
+    // Return response
+    return res.status(200).json({
+      workouts: formattedWorkouts,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit))
+      },
+      success: true
+    });
+  } catch (error) {
+    console.error('Get workouts error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Create a workout
+app.post('/api/workouts', authMiddleware, async (req, res) => {
+  console.log('Create workout endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { title, description, exercises, duration, date, type, notes } = req.body;
+    
+    // Basic validation
+    if (!title) {
+      return res.status(400).json({ message: 'Workout title is required' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Workout = getModel('Workout', workoutSchema);
+    
+    // Create new workout
+    const workout = new Workout({
+      userId: req.user.id,
+      title,
+      description,
+      exercises: exercises || [],
+      duration: duration || 0,
+      date: date ? new Date(date) : new Date(),
+      type: type || 'custom',
+      status: 'planned',
+      notes: notes || ''
+    });
+    
+    await workout.save();
+    
+    // Return the created workout
+    return res.status(201).json({
+      workout: {
+        id: workout._id.toString(),
+        userId: workout.userId.toString(),
+        title: workout.title,
+        description: workout.description || '',
+        exercises: workout.exercises || [],
+        duration: workout.duration || 0,
+        date: workout.date,
+        type: workout.type || 'custom',
+        status: workout.status,
+        notes: workout.notes || '',
+        createdAt: workout.createdAt
+      },
+      success: true,
+      message: 'Workout created successfully'
+    });
+  } catch (error) {
+    console.error('Create workout error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get a single workout
+app.get('/api/workouts/:workoutId', authMiddleware, async (req, res) => {
+  console.log('Get workout details endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { workoutId } = req.params;
+    
+    // Basic validation
+    if (!workoutId) {
+      return res.status(400).json({ message: 'Workout ID is required' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Workout = getModel('Workout', workoutSchema);
+    
+    // Find the workout
+    const workout = await Workout.findById(workoutId);
+    
+    if (!workout) {
+      return res.status(404).json({ message: 'Workout not found' });
+    }
+    
+    // Verify user has permission to access this workout
+    if (req.user.role !== 'admin' && req.user.id !== workout.userId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to access this workout' });
+    }
+    
+    // Return the workout
+    return res.status(200).json({
+      workout: {
+        id: workout._id.toString(),
+        userId: workout.userId.toString(),
+        title: workout.title,
+        description: workout.description || '',
+        exercises: workout.exercises || [],
+        duration: workout.duration || 0,
+        date: workout.date,
+        type: workout.type || 'custom',
+        status: workout.status,
+        notes: workout.notes || '',
+        createdAt: workout.createdAt
+      },
+      success: true
+    });
+  } catch (error) {
+    console.error('Get workout details error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update a workout
+app.put('/api/workouts/:workoutId', authMiddleware, async (req, res) => {
+  console.log('Update workout endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { workoutId } = req.params;
+    const { title, description, exercises, duration, date, type, status, notes } = req.body;
+    
+    // Basic validation
+    if (!workoutId) {
+      return res.status(400).json({ message: 'Workout ID is required' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Workout = getModel('Workout', workoutSchema);
+    
+    // Find the workout
+    const workout = await Workout.findById(workoutId);
+    
+    if (!workout) {
+      return res.status(404).json({ message: 'Workout not found' });
+    }
+    
+    // Verify user has permission to update this workout
+    if (req.user.role !== 'admin' && req.user.id !== workout.userId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this workout' });
+    }
+    
+    // Update fields
+    if (title) workout.title = title;
+    if (description !== undefined) workout.description = description;
+    if (exercises) workout.exercises = exercises;
+    if (duration !== undefined) workout.duration = duration;
+    if (date) workout.date = new Date(date);
+    if (type) workout.type = type;
+    if (status) workout.status = status;
+    if (notes !== undefined) workout.notes = notes;
+    
+    await workout.save();
+    
+    // Return the updated workout
+    return res.status(200).json({
+      workout: {
+        id: workout._id.toString(),
+        userId: workout.userId.toString(),
+        title: workout.title,
+        description: workout.description || '',
+        exercises: workout.exercises || [],
+        duration: workout.duration || 0,
+        date: workout.date,
+        type: workout.type || 'custom',
+        status: workout.status,
+        notes: workout.notes || '',
+        createdAt: workout.createdAt
+      },
+      success: true,
+      message: 'Workout updated successfully'
+    });
+  } catch (error) {
+    console.error('Update workout error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete a workout
+app.delete('/api/workouts/:workoutId', authMiddleware, async (req, res) => {
+  console.log('Delete workout endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { workoutId } = req.params;
+    
+    // Basic validation
+    if (!workoutId) {
+      return res.status(400).json({ message: 'Workout ID is required' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Workout = getModel('Workout', workoutSchema);
+    
+    // Find the workout
+    const workout = await Workout.findById(workoutId);
+    
+    if (!workout) {
+      return res.status(404).json({ message: 'Workout not found' });
+    }
+    
+    // Verify user has permission to delete this workout
+    if (req.user.role !== 'admin' && req.user.id !== workout.userId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to delete this workout' });
+    }
+    
+    // Delete the workout
+    await Workout.findByIdAndDelete(workoutId);
+    
+    // Return success
+    return res.status(200).json({
+      success: true,
+      message: 'Workout deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete workout error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// NUTRITION ROUTES
+// ===============
+
+// Get user meals
+app.get('/api/meals/user/:userId', authMiddleware, async (req, res) => {
+  console.log('Get user meals endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { userId } = req.params;
+    
+    // Basic validation
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+    
+    // Verify user has permission to access these meals
+    if (req.user.role !== 'admin' && req.user.id !== userId) {
+      return res.status(403).json({ message: 'Not authorized to access these meals' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Meal = getModel('Meal', mealSchema);
+    
+    // Optional query parameters
+    const { limit = 10, page = 1, startDate, endDate, type } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Build query
+    const query = { userId };
+    if (type) query.type = type;
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    }
+    
+    // Get meals
+    const meals = await Meal.find(query)
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Meal.countDocuments(query);
+    
+    // Format meals for response
+    const formattedMeals = meals.map(meal => ({
+      id: meal._id.toString(),
+      userId: meal.userId.toString(),
+      date: meal.date,
+      type: meal.type,
+      name: meal.name,
+      foods: meal.foods || [],
+      calories: meal.calories || 0,
+      protein: meal.protein || 0,
+      carbs: meal.carbs || 0,
+      fat: meal.fat || 0,
+      notes: meal.notes || '',
+      createdAt: meal.createdAt
+    }));
+    
+    // Return response
+    return res.status(200).json({
+      meals: formattedMeals,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit))
+      },
+      success: true
+    });
+  } catch (error) {
+    console.error('Get meals error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Create a meal
+app.post('/api/meals', authMiddleware, async (req, res) => {
+  console.log('Create meal endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { date, type, name, foods, calories, protein, carbs, fat, notes } = req.body;
+    
+    // Basic validation
+    if (!type || !name) {
+      return res.status(400).json({ message: 'Meal type and name are required' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Meal = getModel('Meal', mealSchema);
+    
+    // Create meal
+    const meal = new Meal({
+      userId: req.user.id,
+      date: date ? new Date(date) : new Date(),
+      type,
+      name,
+      foods: foods || [],
+      calories: calories || 0,
+      protein: protein || 0,
+      carbs: carbs || 0,
+      fat: fat || 0,
+      notes: notes || ''
+    });
+    
+    await meal.save();
+    
+    // Return created meal
+    return res.status(201).json({
+      meal: {
+        id: meal._id.toString(),
+        userId: meal.userId.toString(),
+        date: meal.date,
+        type: meal.type,
+        name: meal.name,
+        foods: meal.foods || [],
+        calories: meal.calories || 0,
+        protein: meal.protein || 0,
+        carbs: meal.carbs || 0,
+        fat: meal.fat || 0,
+        notes: meal.notes || '',
+        createdAt: meal.createdAt
+      },
+      success: true,
+      message: 'Meal created successfully'
+    });
+  } catch (error) {
+    console.error('Create meal error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get nutrition summary for user by date range
+app.get('/api/nutrition/summary/:userId', authMiddleware, async (req, res) => {
+  console.log('Get nutrition summary endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { userId } = req.params;
+    const { startDate, endDate } = req.query;
+    
+    // Basic validation
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+    
+    // Verify user has permission
+    if (req.user.role !== 'admin' && req.user.id !== userId) {
+      return res.status(403).json({ message: 'Not authorized to access this data' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Meal = getModel('Meal', mealSchema);
+    
+    // Build query for date range
+    const query = { userId };
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    } else {
+      // Default to last 7 days if no dates specified
+      const defaultStartDate = new Date();
+      defaultStartDate.setDate(defaultStartDate.getDate() - 7);
+      query.date = { $gte: defaultStartDate };
+    }
+    
+    // Get meals in date range
+    const meals = await Meal.find(query).sort({ date: 1 });
+    
+    // Calculate daily totals
+    const dailyTotals = {};
+    meals.forEach(meal => {
+      const dateStr = meal.date.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      if (!dailyTotals[dateStr]) {
+        dailyTotals[dateStr] = {
+          date: dateStr,
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          mealCount: 0
+        };
+      }
+      
+      dailyTotals[dateStr].calories += meal.calories || 0;
+      dailyTotals[dateStr].protein += meal.protein || 0;
+      dailyTotals[dateStr].carbs += meal.carbs || 0;
+      dailyTotals[dateStr].fat += meal.fat || 0;
+      dailyTotals[dateStr].mealCount += 1;
+    });
+    
+    // Convert to array and calculate averages
+    const dailySummary = Object.values(dailyTotals);
+    
+    // Calculate overall summary
+    const overallSummary = {
+      totalDays: dailySummary.length,
+      avgCalories: dailySummary.length ? dailySummary.reduce((sum, day) => sum + day.calories, 0) / dailySummary.length : 0,
+      avgProtein: dailySummary.length ? dailySummary.reduce((sum, day) => sum + day.protein, 0) / dailySummary.length : 0,
+      avgCarbs: dailySummary.length ? dailySummary.reduce((sum, day) => sum + day.carbs, 0) / dailySummary.length : 0,
+      avgFat: dailySummary.length ? dailySummary.reduce((sum, day) => sum + day.fat, 0) / dailySummary.length : 0,
+      totalCalories: dailySummary.reduce((sum, day) => sum + day.calories, 0),
+      totalProtein: dailySummary.reduce((sum, day) => sum + day.protein, 0),
+      totalCarbs: dailySummary.reduce((sum, day) => sum + day.carbs, 0),
+      totalFat: dailySummary.reduce((sum, day) => sum + day.fat, 0)
+    };
+    
+    return res.status(200).json({
+      dailySummary,
+      overallSummary,
+      success: true
+    });
+  } catch (error) {
+    console.error('Get nutrition summary error:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

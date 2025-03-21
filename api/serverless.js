@@ -205,6 +205,79 @@ app.get('/api/admin/users-mock', authMiddleware, adminMiddleware, (req, res) => 
   });
 });
 
+// Simple test endpoint for frontend debugging
+app.get('/api/admin/users-simple', authMiddleware, adminMiddleware, (req, res) => {
+  console.log('Admin simple users endpoint hit:', new Date().toISOString());
+  
+  // Simple array of users - no nested structure
+  const users = [
+    { id: 'user1', name: 'Test User 1', email: 'user1@example.com', role: 'user', membershipType: 'premium' },
+    { id: 'user2', name: 'Test User 2', email: 'user2@example.com', role: 'user', membershipType: 'basic' },
+    { id: 'user3', name: 'Test User 3', email: 'user3@example.com', role: 'user', membershipType: 'premium' }
+  ];
+  
+  console.log('Returning simple array with length:', users.length);
+  res.status(200).json(users);
+});
+
+// Debug endpoint with multiple response formats
+app.get('/api/admin/format-test', authMiddleware, adminMiddleware, (req, res) => {
+  console.log('Format test endpoint hit:', new Date().toISOString());
+  
+  // Get requested format from query param
+  const format = req.query.format || 'default';
+  
+  // Sample data
+  const users = [
+    { id: 'test1', name: 'Format Test 1', email: 'test1@example.com', role: 'user' },
+    { id: 'test2', name: 'Format Test 2', email: 'test2@example.com', role: 'user' }
+  ];
+  
+  let response;
+  
+  // Return different formats based on query parameter
+  switch(format) {
+    case 'array':
+      // Direct array
+      response = users;
+      break;
+    case 'data':
+      // Object with data property containing array
+      response = { data: users };
+      break;
+    case 'users':
+      // Object with users property containing array
+      response = { users: users };
+      break;
+    case 'nested':
+      // Deeply nested structure
+      response = { results: { data: users } };
+      break;
+    case 'empty':
+      // Empty array
+      response = { data: [] };
+      break;
+    case 'null':
+      // Null data
+      response = { data: null };
+      break;
+    case 'string':
+      // String data (will cause error)
+      response = { data: "This is not an array" };
+      break;
+    default:
+      // Standard format matching current API
+      response = {
+        data: users,
+        success: true,
+        pagination: { total: users.length, page: 1, pages: 1 }
+      };
+  }
+  
+  console.log('Format test responding with format:', format);
+  res.status(200).json(response);
+});
+
 // MongoDB Schema Definitions
 // =========================
 
@@ -835,27 +908,23 @@ app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) =>
       // Primary format: under 'data' key
       data: finalUsers,
       
-      // Alternative formats the frontend might expect
-      users: finalUsers,
-      
-      // Nested object pattern sometimes used
-      results: {
-        data: finalUsers,
-        users: finalUsers
-      },
+      // Add success flag
+      success: true,
       
       // Pagination info
       pagination: {
         total: total || finalUsers.length,
         page,
         pages: Math.ceil((total || finalUsers.length) / limit)
-      },
-      
-      // Add success flag
-      success: true
+      }
     };
     
+    // Add detailed logging of the response structure
     console.log('Admin users response ready with user count:', finalUsers.length);
+    console.log('Response structure:', {
+      hasDataArray: Array.isArray(responseData.data),
+      dataLength: Array.isArray(responseData.data) ? responseData.data.length : 'not an array'
+    });
     
     res.status(200).json(responseData);
   } catch (error) {
@@ -869,10 +938,8 @@ app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) =>
     
     res.status(200).json({
       data: fallbackUsers,
-      users: fallbackUsers,
-      results: { data: fallbackUsers },
-      pagination: { total: 2, page: 1, pages: 1 },
       success: true,
+      pagination: { total: 2, page: 1, pages: 1 },
       error: { message: error.message, wasHandled: true }
     });
   }
@@ -926,24 +993,15 @@ app.get('/api/admin/trainers', authMiddleware, adminMiddleware, async (req, res)
       // Primary format: under 'data' key
       data: finalTrainers,
       
-      // Alternative formats the frontend might expect
-      trainers: finalTrainers,
-      
-      // Nested object pattern sometimes used
-      results: {
-        data: finalTrainers,
-        trainers: finalTrainers
-      },
+      // Add success flag
+      success: true,
       
       // Pagination info
       pagination: {
         total: total || finalTrainers.length,
         page,
         pages: Math.ceil((total || finalTrainers.length) / limit)
-      },
-      
-      // Add success flag
-      success: true
+      }
     };
     
     console.log('Admin trainers response ready with trainer count:', finalTrainers.length);
@@ -960,10 +1018,8 @@ app.get('/api/admin/trainers', authMiddleware, adminMiddleware, async (req, res)
     
     res.status(200).json({
       data: fallbackTrainers,
-      trainers: fallbackTrainers,
-      results: { data: fallbackTrainers },
-      pagination: { total: 2, page: 1, pages: 1 },
       success: true,
+      pagination: { total: 2, page: 1, pages: 1 },
       error: { message: error.message, wasHandled: true }
     });
   }

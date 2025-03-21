@@ -107,16 +107,15 @@ app.get('/api/direct-debug', (req, res) => {
 app.use(cors({
   origin: ENV.NODE_ENV === 'production'
     ? [
+        'https://final-fit-frontend.vercel.app',
         ENV.CLIENT_URL,
         /\.vercel\.app$/,
-        /localhost/,
-        'https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app',
-        'https://final-fit-frontend-ev7xv9kct-feba-rodrigues-projects.vercel.app'
+        /localhost/
       ]
     : ENV.CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'x-auth-token'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 86400 // 24 hours
 }));
@@ -128,6 +127,7 @@ app.options('*', cors());
 app.use((req, res, next) => {
     // Allow specific frontend domains
     const allowedOrigins = [
+        'https://final-fit-frontend.vercel.app',
         'https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app',
         'https://final-fit-frontend-ev7xv9kct-feba-rodrigues-projects.vercel.app'
     ];
@@ -135,10 +135,13 @@ app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (origin && (allowedOrigins.includes(origin) || origin.includes('vercel.app') || origin.includes('localhost'))) {
         res.header('Access-Control-Allow-Origin', origin);
+    } else {
+        // If no origin matches, do not set the header at all
+        // DO NOT use wildcard '*' with credentials
     }
     
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
     res.header('Access-Control-Allow-Credentials', 'true');
     
     // Handle preflight requests
@@ -155,7 +158,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: store,
-  cookie: {
+  cookie: { 
     secure: ENV.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax',
@@ -605,7 +608,7 @@ app.all('/api/*', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({
+  res.status(500).json({ 
     message: 'Internal Server Error',
     error: ENV.NODE_ENV === 'development' ? err.message : undefined
   });

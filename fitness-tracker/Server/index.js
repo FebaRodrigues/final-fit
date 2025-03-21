@@ -58,15 +58,31 @@ try {
 // Create the Express app
 const app = express();
 
-// CRITICAL: Apply CORS configuration first before any other middleware
-// Use our custom CORS handler for fine-grained control
-app.use(corsMiddleware);
+// Simple direct CORS header setter for all routes
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://final-fit-frontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
 
-// Add a special handler for OPTIONS requests to ensure CORS preflight works
-app.options('*', (req, res) => {
-  console.log('Handling OPTIONS preflight request in global handler');
-  // The corsMiddleware should have set the appropriate headers
-  res.status(200).end();
+  // Handle all OPTIONS requests here
+  if (req.method === 'OPTIONS') {
+    console.log(`OPTIONS request received from ${req.headers.origin} for ${req.path}`);
+    return res.status(204).end();
+  }
+  next();
+});
+
+// Special route for CORS preflight on admin login
+app.options('/api/admin/login', (req, res) => {
+  console.log('OPTIONS request received for admin login');
+  res.header('Access-Control-Allow-Origin', 'https://final-fit-frontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  res.status(204).end();
 });
 
 // Very simple debug endpoint that doesn't require any imports or middleware
@@ -110,16 +126,6 @@ app.get('/api/direct-debug', (req, res) => {
     }
   });
 });
-
-// Standard CORS middleware as a fallback
-app.use(cors({
-  origin: ['https://final-fit-frontend.vercel.app', 'http://localhost:5173', 'http://localhost:5174'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'x-auth-token'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400 // 24 hours
-}));
 
 // Parse raw body for Stripe webhooks
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
@@ -168,6 +174,12 @@ app.get('/api/cors-test', (req, res) => {
       origin: req.headers.origin,
       referer: req.headers.referer,
       host: req.headers.host
+    },
+    corsHeaders: {
+      allowOrigin: res.getHeader('Access-Control-Allow-Origin'),
+      allowMethods: res.getHeader('Access-Control-Allow-Methods'),
+      allowHeaders: res.getHeader('Access-Control-Allow-Headers'),
+      allowCredentials: res.getHeader('Access-Control-Allow-Credentials')
     }
   });
 });

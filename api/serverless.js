@@ -31,6 +31,30 @@ app.use((req, res, next) => {
   next();
 });
 
+// Authentication middleware
+const authMiddleware = async (req, res, next) => {
+  try {
+    // Get token from header
+    const token = req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
+    
+    // Check if no token
+    if (!token) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
+    }
+    
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-jwt-secret');
+    
+    // Add user to request
+    req.user = decoded;
+    
+    next();
+  } catch (error) {
+    console.error('Auth error:', error.message);
+    res.status(401).json({ message: 'Token is not valid', error: error.message });
+  }
+};
+
 // Root endpoint - Add this to handle the root path
 app.get('/', (req, res) => {
   res.status(200).json({ 
@@ -41,7 +65,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       api: '/api',
-      adminLogin: '/api/admin/login'
+      adminLogin: '/api/admin/login',
+      adminProfile: '/api/admin/profile'
     }
   });
 });
@@ -224,6 +249,53 @@ app.post('/api/admin/login', async (req, res) => {
     console.error('Admin login error:', error);
     res.status(500).json({ 
       message: 'Server error processing login',
+      errorType: error.name, 
+      errorMessage: error.message 
+    });
+  }
+});
+
+// Admin profile endpoint
+app.get('/api/admin/profile', authMiddleware, async (req, res) => {
+  console.log('Admin profile endpoint hit:', new Date().toISOString());
+  try {
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ 
+        message: 'Database connection failed',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Get Admin model
+    let Admin;
+    try {
+      Admin = mongoose.model('Admin');
+    } catch (e) {
+      Admin = mongoose.model('Admin', adminSchema);
+    }
+    
+    // Find admin by ID from token
+    const admin = await Admin.findById(req.user.id).select('-password');
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+    
+    // Send admin profile
+    res.status(200).json({
+      admin: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role || 'admin',
+        lastLogin: admin.lastLogin
+      }
+    });
+  } catch (error) {
+    console.error('Admin profile error:', error);
+    res.status(500).json({ 
+      message: 'Server error fetching admin profile',
       errorType: error.name, 
       errorMessage: error.message 
     });

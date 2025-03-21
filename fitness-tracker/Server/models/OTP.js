@@ -3,44 +3,45 @@ const mongoose = require('mongoose');
 // Define OTP schema
 const otpSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.Mixed, // Changed from ObjectId to Mixed to support both string and ObjectId
-    ref: 'User',
+    type: String, // Store userId as string for consistent comparison
     required: true
   },
   code: {
     type: String,
     required: true
   },
-  expires: {
-    type: Date,
-    required: true,
-    index: { expires: '1h' } // Auto-delete expired OTPs after 1 hour
-  },
-  purpose: {
-    type: String,
-    enum: ['payment', 'registration', 'password-reset', 'other'],
-    default: 'payment'
-  },
   isUsed: {
     type: Boolean,
     default: false
   },
+  purpose: {
+    type: String,
+    enum: ['payment', 'auth', 'reset-password', 'email-verification'],
+    default: 'payment'
+  },
   email: {
     type: String,
+    required: false
+  },
+  expires: {
+    type: Date,
     required: true
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    expires: 86400 // Auto-delete after 24 hours
   }
 });
 
-// Create TTL index on expires field
-otpSchema.index({ expires: 1 }, { expireAfterSeconds: 0 });
-
-// Add a text index on the userId field to make string-based searches more efficient
-otpSchema.index({ userId: 1 });
+// Create index for faster OTP lookups by code
 otpSchema.index({ code: 1 });
+
+// Create compound index for user-specific OTP lookups
+otpSchema.index({ userId: 1, isUsed: 1, expires: 1 });
+
+// Create TTL index based on expires field to automatically remove expired OTPs
+otpSchema.index({ expires: 1 }, { expireAfterSeconds: 0 });
 
 const OTP = mongoose.model('OTP', otpSchema);
 

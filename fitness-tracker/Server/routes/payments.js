@@ -176,8 +176,13 @@ router.post('/create-pending', auth(['user']), createPendingPayment);
 // Make verify-session public so it can be accessed from the payment success page without authentication
 router.get('/verify-session', auth(['user']), verifyStripeSession);
 router.post('/send-otp', auth(['user']), sendPaymentOTP);
-// TEMPORARILY REMOVE AUTH FOR DEBUGGING
-router.post('/verify-otp', verifyPaymentOTP);
+// ENSURE THIS ENDPOINT WORKS - NO AUTH FOR OTP VERIFICATION
+router.post('/verify-otp', (req, res) => {
+  console.log('OTP verification endpoint accessed at', new Date().toISOString());
+  console.log('Request body:', req.body);
+  // Continue with the normal verification
+  verifyPaymentOTP(req, res);
+});
 
 // Payment history routes
 router.get('/user/:userId', auth(['user']), getUserPayments);

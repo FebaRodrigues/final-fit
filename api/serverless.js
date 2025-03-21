@@ -335,6 +335,20 @@ const trainerSchema = new mongoose.Schema({
   lastLogin: { type: Date }
 });
 
+// Define Membership schema inline
+const membershipSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+  plan: { type: String, required: true, enum: ['basic', 'premium', 'unlimited'] },
+  startDate: { type: Date, default: Date.now },
+  endDate: { type: Date, required: true },
+  paymentId: { type: String },
+  status: { type: String, default: 'active', enum: ['active', 'expired', 'canceled'] },
+  features: [{ type: String }],
+  renewalPrice: { type: Number },
+  autoRenew: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
 // MongoDB Connection
 // =================
 
@@ -638,9 +652,9 @@ app.post('/api/users/login', async (req, res) => {
   }
 });
 
-// Get user profile
+// Get user profile (singular version)
 app.get('/api/user/profile', authMiddleware, async (req, res) => {
-  console.log('User profile endpoint hit:', new Date().toISOString());
+  console.log('User profile endpoint hit (singular):', new Date().toISOString());
   try {
     // Connect to MongoDB
     const connected = await connectDB();
@@ -659,6 +673,44 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
     res.status(200).json({ user });
   } catch (error) {
     console.error('User profile error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get user profile - plural version for frontend compatibility
+app.get('/api/users/profile', authMiddleware, async (req, res) => {
+  console.log('Plural users profile endpoint hit:', new Date().toISOString());
+  try {
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    const User = getModel('User', userSchema);
+    
+    // Find user by ID from token
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Format response to match frontend expectations
+    res.status(200).json({ 
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        image: user.image || null,
+        membershipType: user.membershipType || 'basic',
+        fitnessLevel: user.fitnessLevel || 'beginner',
+        profileCompleted: user.profileCompleted || false,
+        goals: user.goals || []
+      }
+    });
+  } catch (error) {
+    console.error('User profile error (plural endpoint):', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -1234,6 +1286,157 @@ app.get('/api/admin/statistics', authMiddleware, adminMiddleware, async (req, re
       error: error.message,
       success: false 
     });
+  }
+});
+
+// MEMBERSHIP ROUTES
+// ==============
+
+// Get user membership
+app.get('/api/memberships/user/:userId', authMiddleware, async (req, res) => {
+  console.log('Get user membership endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { userId } = req.params;
+    
+    // Basic validation
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+    
+    // Verify user has permission to access this membership
+    // Users can only access their own membership, admins can access any
+    if (req.user.role !== 'admin' && req.user.id !== userId) {
+      return res.status(403).json({ message: 'Not authorized to access this membership' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Membership = getModel('Membership', membershipSchema);
+    
+    // Find active membership for user
+    const membership = await Membership.findOne({
+      userId,
+      status: 'active',
+      endDate: { $gt: new Date() } // Not expired
+    }).sort({ endDate: -1 }); // Get the one with furthest end date if multiple
+    
+    if (!membership) {
+      // No active membership found, return mock data
+      return res.status(200).json({
+        membership: null,
+        message: 'No active membership found'
+      });
+    }
+    
+    // Return membership data
+    return res.status(200).json({
+      membership: {
+        id: membership._id.toString(),
+        userId: membership.userId.toString(),
+        plan: membership.plan,
+        startDate: membership.startDate,
+        endDate: membership.endDate,
+        status: membership.status,
+        features: membership.features || [],
+        renewalPrice: membership.renewalPrice,
+        autoRenew: membership.autoRenew
+      }
+    });
+  } catch (error) {
+    console.error('Get membership error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Create Mock Membership (for testing)
+app.post('/api/memberships/create-mock', authMiddleware, async (req, res) => {
+  console.log('Create mock membership endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { userId, plan = 'basic' } = req.body;
+    
+    // Basic validation
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+    
+    // Verify user has permission (only self or admin)
+    if (req.user.role !== 'admin' && req.user.id !== userId) {
+      return res.status(403).json({ message: 'Not authorized to create membership' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Membership = getModel('Membership', membershipSchema);
+    
+    // Set end date based on plan (30 days for basic, 90 for premium, 365 for unlimited)
+    const today = new Date();
+    const endDate = new Date();
+    
+    switch (plan) {
+      case 'premium':
+        endDate.setDate(today.getDate() + 90);
+        break;
+      case 'unlimited':
+        endDate.setDate(today.getDate() + 365);
+        break;
+      default: // basic
+        endDate.setDate(today.getDate() + 30);
+    }
+    
+    // Generate features based on plan
+    let features = ['workout_tracking', 'meal_planning'];
+    if (plan === 'premium' || plan === 'unlimited') {
+      features.push('trainer_consultation', 'personalized_plans');
+    }
+    if (plan === 'unlimited') {
+      features.push('premium_content', 'priority_support', 'group_classes');
+    }
+    
+    // Create membership
+    const membership = new Membership({
+      userId,
+      plan,
+      startDate: today,
+      endDate,
+      paymentId: `mock-payment-${Date.now()}`,
+      status: 'active',
+      features,
+      renewalPrice: plan === 'basic' ? 9.99 : (plan === 'premium' ? 19.99 : 29.99),
+      autoRenew: false
+    });
+    
+    await membership.save();
+    
+    // Return membership data
+    return res.status(201).json({
+      membership: {
+        id: membership._id.toString(),
+        userId: membership.userId.toString(),
+        plan: membership.plan,
+        startDate: membership.startDate,
+        endDate: membership.endDate,
+        status: membership.status,
+        features: membership.features,
+        renewalPrice: membership.renewalPrice,
+        autoRenew: membership.autoRenew
+      },
+      message: 'Mock membership created successfully'
+    });
+  } catch (error) {
+    console.error('Create mock membership error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

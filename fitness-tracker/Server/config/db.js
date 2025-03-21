@@ -1,9 +1,11 @@
 // config/db.js
 
 const mongoose = require('mongoose');
+const { MongoClient } = require('mongodb');
 
 // Cache the database connection for serverless environments
 let cachedConnection = null;
+let cachedDb = null;
 
 const connectDB = async () => {
    try {
@@ -41,7 +43,38 @@ const connectDB = async () => {
         
         console.log('Connecting to MongoDB Atlas...');
         
-        // Connect with retry logic
+        // Try direct MongoClient approach first for serverless environments
+        try {
+            console.log('Attempting direct MongoClient connection...');
+            const client = new MongoClient(mongoUri, {
+                serverSelectionTimeoutMS: 5000,
+                connectTimeoutMS: 5000,
+                socketTimeoutMS: 30000,
+            });
+            
+            await client.connect();
+            
+            // Test the connection with a ping
+            await client.db('admin').command({ ping: 1 });
+            
+            // Store the client and db in cache
+            cachedDb = client.db();
+            cachedConnection = client;
+            
+            console.log('=== Direct MongoDB Connection Successful ===');
+            console.log(`Connected to database: ${cachedDb.databaseName}`);
+            console.log('Using native MongoClient instead of Mongoose');
+            
+            // Return early - we're using direct client instead of mongoose
+            return;
+            
+        } catch (directError) {
+            console.warn('Direct MongoClient connection failed:', directError.message);
+            console.log('Falling back to Mongoose connection...');
+            // Continue with mongoose as fallback
+        }
+        
+        // Connect with retry logic (mongoose fallback)
         let retries = 3;
         while (retries > 0) {
             try {
@@ -61,7 +94,6 @@ const connectDB = async () => {
         console.log('=== MongoDB Connection Successful ===');
         console.log(`Connected to database: ${dbName}`);
         console.log(`Connection state: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Not connected'}`);
-        console.log(`MongoDB version: ${await mongoose.connection.db.admin().serverInfo().then(info => info.version)}`);
         
         // Perform a quick ping to test the connection
         try {
@@ -69,35 +101,6 @@ const connectDB = async () => {
             console.log('✅ MongoDB ping successful');
         } catch (pingError) {
             console.error('❌ MongoDB ping failed:', pingError.message);
-        }
-        
-        // Drop the problematic index on the payments collection
-        try {
-            const db = mongoose.connection.db;
-            const collections = await db.listCollections({ name: 'payments' }).toArray();
-            
-            if (collections.length > 0) {
-                console.log('Checking for problematic index on payments collection...');
-                const indexes = await db.collection('payments').indexes();
-                const hasTransactionIdIndex = indexes.some(index => index.name === 'transactionId_1');
-                
-                if (hasTransactionIdIndex) {
-                    console.log('Dropping problematic index on payments collection...');
-                    await db.collection('payments').dropIndex('transactionId_1');
-                    console.log('Successfully dropped index transactionId_1');
-                } else {
-                    console.log('Index transactionId_1 not found, no need to drop');
-                }
-            } else {
-                console.log('Payments collection not found, no need to drop index');
-            }
-        } catch (indexError) {
-            // If the index doesn't exist, that's fine
-            if (indexError.code !== 27) {
-                console.warn('Warning: Failed to drop index:', indexError.message);
-            } else {
-                console.log('Index transactionId_1 does not exist, no need to drop');
-            }
         }
     } catch (error) {
         console.error('MongoDB Atlas connection failed:', error.message);
@@ -130,12 +133,35 @@ mongoose.connection.on('disconnected', () => {
     console.warn('MongoDB connection disconnected');
 });
 
+// Function to get the database (either mongoose or direct client)
+const getDb = () => {
+    if (cachedDb) {
+        return cachedDb; // Return the direct MongoClient db if available
+    }
+    
+    if (mongoose.connection.readyState === 1) {
+        return mongoose.connection.db; // Return mongoose connection if available
+    }
+    
+    throw new Error('No database connection available');
+};
+
 // Handle application termination
 process.on('SIGINT', async () => {
-    await mongoose.connection.close();
+    if (cachedConnection) {
+        if (cachedConnection.close) {
+            // Direct MongoDB client
+            await cachedConnection.close();
+        } else if (cachedConnection.disconnect) {
+            // Mongoose connection
+            await cachedConnection.disconnect();
+        }
+    }
     console.log('MongoDB connection closed due to app termination');
     process.exit(0);
 });
 
 module.exports = connectDB;
+// Export the getDb function for direct client access
+module.exports.getDb = getDb;
 

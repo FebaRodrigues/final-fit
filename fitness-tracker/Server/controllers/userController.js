@@ -7,6 +7,7 @@ const { uploadToCloudinary } = require('../utilities/imageUpload');
 const { createWelcomeNotification } = require('./notificationController');
 const fs = require('fs');
 const path = require('path');
+const mongoose = require('mongoose');
 
 // Default profile image URL
 const DEFAULT_PROFILE_IMAGE = "https://res.cloudinary.com/daacjyk3d/image/upload/v1740376690/fitnessApp/gfo0vamcfcurte2gc4jk.jpg";
@@ -97,43 +98,103 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     try {
+        console.log(`Login attempt for email: ${email} at ${new Date().toISOString()}`);
+        
+        // Check if mongoose connection is working
+        let user;
+        let useDirectClient = false;
+        
+        try {
+            // Try standard mongoose query first
+            if (mongoose.connection.readyState === 1) {
+                console.log('Using mongoose connection for login');
+                user = await User.findOne({ email });
+            } else {
+                // Connection not ready, will try direct client
+                useDirectClient = true;
+                throw new Error('Mongoose connection not ready');
+            }
+        } catch (mongooseError) {
+            console.warn('Mongoose query failed:', mongooseError.message);
+            
+            // Fall back to direct MongoDB client if mongoose fails
+            try {
+                useDirectClient = true;
+                const { getDb } = require('../config/db');
+                const db = getDb();
+                
+                console.log('Using direct MongoDB client for login');
+                user = await db.collection('users').findOne({ email });
+                
+                if (user) {
+                    console.log('User found with direct MongoDB client');
+                }
+            } catch (directError) {
+                console.error('Direct MongoDB query failed:', directError.message);
+                throw new Error('Database connection failed. Please try again later.');
+            }
+        }
+        
         // Check if user exists
-        const user = await User.findOne({ email });
         if (!user) {
+            console.log(`No user found with email: ${email}`);
             return res.status(400).json({ message: 'Invalid credentials' });
         }
-
-        // Check password
+        
+        // Compare password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+            console.log(`Password mismatch for user: ${email}`);
             return res.status(400).json({ message: 'Invalid credentials' });
         }
-
+        
+        // Update last login time
+        try {
+            if (useDirectClient) {
+                const { getDb } = require('../config/db');
+                const db = getDb();
+                await db.collection('users').updateOne(
+                    { _id: user._id },
+                    { $set: { lastLogin: new Date() } }
+                );
+            } else {
+                await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+            }
+        } catch (updateError) {
+            // Non-critical, just log the error
+            console.warn('Could not update last login time:', updateError.message);
+        }
+        
         // Create and return token
         const payload = {
-            id: user.id,
-            role: 'user'
+            id: user._id.toString(),
+            role: user.role || 'user'
         };
-
+        
+        console.log(`Generating token for user ${user._id.toString()} with role ${user.role || 'user'}`);
+        
         const token = jwt.sign(
             payload,
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRE || '30d' }
         );
-
-        res.json({
+        
+        console.log(`Login successful for user: ${email}`);
+        
+        // Return user data and token
+        return res.json({
             token,
             user: {
-                id: user.id,
+                id: user._id.toString(),
                 name: user.name,
                 email: user.email,
-                role: 'user',
-                imageUrl: user.imageUrl
+                role: user.role || 'user',
+                image: user.image || DEFAULT_PROFILE_IMAGE
             }
         });
     } catch (error) {
-        console.error('Error logging in user:', error);
-        res.status(500).json({ message: error.message });
+        console.error('Login error:', error.message);
+        return res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 

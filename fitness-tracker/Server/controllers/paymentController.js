@@ -193,20 +193,20 @@ const sendPaymentOTP = async (req, res) => {
     // Also store OTP in session as backup
     let sessionOtpSaved = false;
     if (req.session) {
-      req.session.otp = { 
+    req.session.otp = { 
         code: otp.toString(), 
         expires: expiryDate, 
         userId: userId.toString() 
       };
       
       console.log('OTP session data before save:', JSON.stringify(req.session.otp, null, 2));
-      
-      // Save session explicitly to ensure it's stored
+    
+    // Save session explicitly to ensure it's stored
       try {
         await new Promise((resolve, reject) => {
-          req.session.save((err) => {
-            if (err) {
-              console.error('Error saving session:', err);
+    req.session.save((err) => {
+      if (err) {
+        console.error('Error saving session:', err);
               reject(err);
             } else {
               console.log('OTP session saved successfully');
@@ -224,7 +224,7 @@ const sendPaymentOTP = async (req, res) => {
     // Send OTP via email
     let emailSent = false;
     try {
-      await sendOTP(emailToUse, otp);
+    await sendOTP(emailToUse, otp);
       console.log('OTP email sent successfully to:', emailToUse);
       emailSent = true;
     } catch (emailError) {
@@ -395,8 +395,8 @@ const verifyPaymentOTP = async (req, res) => {
           const pendingPayment = await Payment.findOne({
             userId: sanitizedUserId,
             status: 'pending'
-          }).sort({ createdAt: -1 });
-          
+    }).sort({ createdAt: -1 });
+
           if (pendingPayment) {
             console.log(`Found pending payment record: ${pendingPayment._id}`);
             
@@ -424,14 +424,14 @@ const verifyPaymentOTP = async (req, res) => {
           console.error(`Error updating payment status: ${paymentUpdateError.message}`);
         }
         
-        return res.status(200).json({
+      return res.status(200).json({ 
           success: true,
-          message: 'OTP verified successfully',
+        message: 'OTP verified successfully',
           membershipUpdated,
-        });
+      });
       } catch (finalError) {
         console.error(`Error in final steps of OTP verification: ${finalError.message}`);
-        return res.status(200).json({
+      return res.status(200).json({ 
           success: true,
           message: 'OTP verified but payment processing encountered an error',
           error: finalError.message

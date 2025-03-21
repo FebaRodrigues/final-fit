@@ -58,17 +58,39 @@ try {
 // Create the Express app
 const app = express();
 
-// Configure CORS - Set it up early in the middleware chain
+// Setup CORS options with specific routes handling
 const corsOptions = {
-  origin: ['https://final-fit-frontend.vercel.app', 'http://localhost:5173'],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'x-auth-token'],
+  origin: function(origin, callback) {
+    const allowedOrigins = ['https://final-fit-frontend.vercel.app', 'http://localhost:5173'];
+    // Allow requests with no origin (like mobile apps, curl requests, etc.)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'x-auth-token'],
   maxAge: 86400 // 24 hours
 };
 
 // Apply CORS middleware
 app.use(cors(corsOptions));
+
+// Handle CORS preflight for all routes
+app.options('*', cors(corsOptions));
+
+// Specific handler for the admin login route
+app.options('/api/admin/login', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://final-fit-frontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  res.status(204).end();
+});
 
 // Backup CORS headers for any route that might bypass the CORS middleware
 app.use((req, res, next) => {

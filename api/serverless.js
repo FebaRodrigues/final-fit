@@ -2505,5 +2505,80 @@ app.all('*', (req, res) => {
   });
 });
 
+// Update user profile without image - field updates only
+app.put('/api/users/update-fields', authMiddleware, async (req, res) => {
+  console.log('Update user fields only endpoint hit (no image):', new Date().toISOString());
+  try {
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    const User = getModel('User', userSchema);
+    
+    // Find user
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    console.log('Received field update data:', req.body);
+    
+    // Update fields
+    const updateFields = [
+      'name', 'phone', 'goals', 'fitnessLevel', 
+      'age', 'height', 'weight', 'gender', 'membershipType'
+    ];
+    
+    // Apply updates
+    updateFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        // Handle array fields (like goals)
+        if (field === 'goals' && typeof req.body[field] === 'string') {
+          try {
+            user[field] = JSON.parse(req.body[field]);
+          } catch (e) {
+            user[field] = req.body[field].split(',').map(goal => goal.trim());
+          }
+        } else {
+          user[field] = req.body[field];
+        }
+      }
+    });
+    
+    // Mark profile as completed if key fields are provided
+    if (user.name && user.age && user.gender) {
+      user.profileCompleted = true;
+    }
+    
+    await user.save();
+    
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        image: user.image,
+        age: user.age || '',
+        height: user.height || '',
+        weight: user.weight || '',
+        gender: user.gender || '',
+        goals: user.goals || [],
+        fitnessLevel: user.fitnessLevel || 'beginner',
+        profileCompleted: user.profileCompleted,
+        membershipType: user.membershipType || 'basic',
+        role: user.role
+      },
+      success: true
+    });
+  } catch (error) {
+    console.error('Update user fields error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message, success: false });
+  }
+});
+
 // Export for Vercel
 module.exports = app; 

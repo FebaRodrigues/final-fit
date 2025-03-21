@@ -479,6 +479,21 @@ app.post('/verify-any-otp', async (req, res) => {
   }
 });
 
+// Add a version endpoint at the root level for quick verification
+app.get('/version', (req, res) => {
+  res.json({
+    version: 'v1.0.2',
+    deployedAt: new Date().toISOString(),
+    message: 'OTP fix version with direct endpoints',
+    features: [
+      'Direct OTP generation', 
+      'Universal OTP verification', 
+      'Enhanced error handling',
+      'Session-independent OTP checking'
+    ]
+  });
+});
+
 // Routes
 const userRoutes = require('./routes/users');
 const trainerRoutes = require('./routes/trainerRoutes');

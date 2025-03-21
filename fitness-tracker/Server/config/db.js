@@ -12,7 +12,7 @@ const connectDB = async () => {
         // If we already have a connection, return it
         if (cachedConnection && mongoose.connection.readyState === 1) {
             console.log('Using existing MongoDB connection');
-            return;
+            return mongoose.connection;
         }
         
         // Use MONGO_URI to match the .env file
@@ -24,9 +24,11 @@ const connectDB = async () => {
         
         // Set mongoose options for better connection handling in serverless environments
         const options = {
-            serverSelectionTimeoutMS: 30000,  // Increased from 15000 to 30000 (30s)
-            connectTimeoutMS: 30000,          // Increased from 15000 to 30000 (30s)
-            socketTimeoutMS: 60000,           // Increased from 45000 to 60000 (60s)
+            useNewUrlParser: true,            // Use the new URL parser (recommended)
+            useUnifiedTopology: true,         // Use the new Server Discovery and Monitoring engine
+            serverSelectionTimeoutMS: 30000,  // 30 seconds timeout for server selection
+            connectTimeoutMS: 30000,          // 30 seconds timeout for initial connection
+            socketTimeoutMS: 60000,           // 60 seconds timeout for socket operations
             maxPoolSize: 10,                  // Limit connection pool for serverless
             minPoolSize: 5,                   // Maintain minimum connections
             maxIdleTimeMS: 10000,             // Close idle connections after 10 seconds
@@ -46,9 +48,11 @@ const connectDB = async () => {
         try {
             console.log('Attempting direct MongoClient connection...');
             const client = new MongoClient(mongoUri, {
-                serverSelectionTimeoutMS: 30000,  // Increased timeout (30s)
-                connectTimeoutMS: 30000,          // Increased timeout (30s)
-                socketTimeoutMS: 60000,           // Increased timeout (60s)
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+                serverSelectionTimeoutMS: 30000,  // 30 seconds timeout
+                connectTimeoutMS: 30000,          // 30 seconds timeout
+                socketTimeoutMS: 60000,           // 60 seconds timeout
                 maxPoolSize: 10,                  // Limit pool size
                 minPoolSize: 5                    // Maintain minimum connections
             });
@@ -67,7 +71,7 @@ const connectDB = async () => {
             console.log('Using native MongoClient instead of Mongoose');
             
             // Return early - we're using direct client instead of mongoose
-            return;
+            return client;
             
         } catch (directError) {
             console.warn('Direct MongoClient connection failed:', directError.message);
@@ -77,16 +81,21 @@ const connectDB = async () => {
         
         // Connect with retry logic (mongoose fallback)
         let retries = 3;
+        let conn = null;
+        
         while (retries > 0) {
             try {
-                await mongoose.connect(mongoUri, options);
+                conn = await mongoose.connect(mongoUri, options);
                 cachedConnection = mongoose.connection;
+                
+                console.log(`MongoDB Connected: ${conn.connection.host}`);
+                
                 break; // Connection successful, exit loop
             } catch (err) {
                 retries--;
                 if (retries === 0) throw err; // No more retries, propagate error
                 console.log(`Connection attempt failed, retrying... (${retries} attempts left)`);
-                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before retry (increased from 2s)
+                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before retry
             }
         }
         
@@ -103,6 +112,8 @@ const connectDB = async () => {
         } catch (pingError) {
             console.error('❌ MongoDB ping failed:', pingError.message);
         }
+        
+        return conn;
     } catch (error) {
         console.error('MongoDB Atlas connection failed:', error.message);
         
@@ -117,7 +128,15 @@ const connectDB = async () => {
             console.error('MongoDB authentication failed. Please check your username and password in the connection string.');
         }
         
-        // Don't exit the process, just log the error and continue
+        // In production, don't exit the process
+        if (process.env.NODE_ENV === 'production') {
+            console.error('Continuing despite MongoDB connection failure in production environment');
+            return null;
+        }
+        
+        // In development, exit the process
+        console.error('Exiting due to MongoDB connection failure in development environment');
+        process.exit(1);
     }
 };
 

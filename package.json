@@ -1,13 +1,12 @@
 {
   "name": "fitness-management-system",
   "version": "1.0.0",
-  "description": "Fitness Management System",
-  "main": "vercel-server.js",
+  "description": "Backend for Fitness Management System",
+  "main": "api/serverless.js",
   "scripts": {
-    "start": "node vercel-server.js",
-    "server": "node vercel-server.js",
-    "dev": "node vercel-server.js",
-    "vercel-build": "echo 'Vercel build complete'"
+    "start": "node api/serverless.js",
+    "dev": "nodemon api/serverless.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "fitness",
@@ -25,6 +24,6 @@
     "mongoose": "^7.0.3"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }

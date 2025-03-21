@@ -58,31 +58,32 @@ try {
 // Create the Express app
 const app = express();
 
-// Simple direct CORS header setter for all routes
+// Configure CORS - Set it up early in the middleware chain
+const corsOptions = {
+  origin: ['https://final-fit-frontend.vercel.app', 'http://localhost:5173'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'x-auth-token'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Backup CORS headers for any route that might bypass the CORS middleware
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://final-fit-frontend.vercel.app');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://final-fit-frontend.vercel.app');
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
-  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400');
 
-  // Handle all OPTIONS requests here
+  // Handle preflight requests
   if (req.method === 'OPTIONS') {
     console.log(`OPTIONS request received from ${req.headers.origin} for ${req.path}`);
     return res.status(204).end();
   }
   next();
-});
-
-// Special route for CORS preflight on admin login
-app.options('/api/admin/login', (req, res) => {
-  console.log('OPTIONS request received for admin login');
-  res.header('Access-Control-Allow-Origin', 'https://final-fit-frontend.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400');
-  res.status(204).end();
 });
 
 // Very simple debug endpoint that doesn't require any imports or middleware
@@ -166,20 +167,24 @@ app.get('/api/health', (req, res) => {
 });
 
 // Add a CORS test endpoint
-app.get('/api/cors-test', (req, res) => {
+app.get('/api/test-cors', (req, res) => {
+  console.log('CORS test endpoint accessed from:', req.headers.origin);
   res.status(200).json({
+    success: true,
     message: 'CORS is working correctly',
     timestamp: new Date().toISOString(),
-    receivedHeaders: {
+    headers: {
+      'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+      'Access-Control-Allow-Methods': res.getHeader('Access-Control-Allow-Methods'),
+      'Access-Control-Allow-Headers': res.getHeader('Access-Control-Allow-Headers'),
+      'Access-Control-Allow-Credentials': res.getHeader('Access-Control-Allow-Credentials')
+    },
+    request: {
       origin: req.headers.origin,
       referer: req.headers.referer,
-      host: req.headers.host
-    },
-    corsHeaders: {
-      allowOrigin: res.getHeader('Access-Control-Allow-Origin'),
-      allowMethods: res.getHeader('Access-Control-Allow-Methods'),
-      allowHeaders: res.getHeader('Access-Control-Allow-Headers'),
-      allowCredentials: res.getHeader('Access-Control-Allow-Credentials')
+      host: req.headers.host,
+      method: req.method,
+      path: req.path
     }
   });
 });

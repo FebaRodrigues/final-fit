@@ -15,22 +15,29 @@ const connectDB = async () => {
             return mongoose.connection;
         }
         
-        // Use MONGO_URI to match the .env file
-        const mongoUri = process.env.MONGO_URI;
+        // Use MONGO_URI to match the .env file but ensure it has the database name
+        let mongoUri = process.env.MONGO_URI || '';
         
         if (!mongoUri) {
             throw new Error('MONGO_URI is not defined in environment variables');
+        }
+        
+        // Make sure the URI includes the database name "test"
+        if (!mongoUri.includes('/test?')) {
+            // Add the database name "test" before the query parameters
+            mongoUri = mongoUri.replace('/?', '/test?');
+            console.log('Added database name "test" to MongoDB URI');
         }
         
         // Set mongoose options for better connection handling in serverless environments
         const options = {
             useNewUrlParser: true,            // Use the new URL parser (recommended)
             useUnifiedTopology: true,         // Use the new Server Discovery and Monitoring engine
-            serverSelectionTimeoutMS: 30000,  // 30 seconds timeout for server selection
-            connectTimeoutMS: 30000,          // 30 seconds timeout for initial connection
-            socketTimeoutMS: 60000,           // 60 seconds timeout for socket operations
+            serverSelectionTimeoutMS: 10000,  // Reduced from 30s to 10s to fail faster in serverless
+            connectTimeoutMS: 10000,          // Reduced from 30s to 10s to fail faster in serverless
+            socketTimeoutMS: 45000,           // Timeout for socket operations
             maxPoolSize: 10,                  // Limit connection pool for serverless
-            minPoolSize: 5,                   // Maintain minimum connections
+            minPoolSize: 1,                   // Reduced minimum connections for serverless
             maxIdleTimeMS: 10000,             // Close idle connections after 10 seconds
             bufferCommands: false,            // Disable buffering for faster connect-close cycles
             family: 4                         // Force IPv4 (can help with some networking issues)
@@ -50,11 +57,11 @@ const connectDB = async () => {
             const client = new MongoClient(mongoUri, {
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
-                serverSelectionTimeoutMS: 30000,  // 30 seconds timeout
-                connectTimeoutMS: 30000,          // 30 seconds timeout
-                socketTimeoutMS: 60000,           // 60 seconds timeout
+                serverSelectionTimeoutMS: 10000,  // Reduced timeout for serverless
+                connectTimeoutMS: 10000,          // Reduced timeout for serverless
+                socketTimeoutMS: 45000,           // Timeout for socket operations
                 maxPoolSize: 10,                  // Limit pool size
-                minPoolSize: 5                    // Maintain minimum connections
+                minPoolSize: 1                    // Reduced for serverless
             });
             
             await client.connect();
@@ -62,8 +69,8 @@ const connectDB = async () => {
             // Test the connection with a ping
             await client.db('admin').command({ ping: 1 });
             
-            // Store the client and db in cache
-            cachedDb = client.db();
+            // Store the client and db in cache - explicitly use "test" database
+            cachedDb = client.db('test');
             cachedConnection = client;
             
             console.log('=== Direct MongoDB Connection Successful ===');
@@ -80,7 +87,7 @@ const connectDB = async () => {
         }
         
         // Connect with retry logic (mongoose fallback)
-        let retries = 3;
+        let retries = 2; // Reduced from 3 to 2 for faster failure in serverless
         let conn = null;
         
         while (retries > 0) {
@@ -95,7 +102,7 @@ const connectDB = async () => {
                 retries--;
                 if (retries === 0) throw err; // No more retries, propagate error
                 console.log(`Connection attempt failed, retrying... (${retries} attempts left)`);
-                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before retry
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry (reduced for serverless)
             }
         }
         
@@ -119,7 +126,7 @@ const connectDB = async () => {
         
         // Provide more detailed error messages based on error type
         if (error.name === 'MongoServerSelectionError') {
-            console.error('Could not connect to any servers in your MongoDB Atlas cluster. One common reason is that you\'re trying to access the database from an IP that isn\'t whitelisted. Make sure your current IP address is on your Atlas cluster\'s IP whitelist: https://www.mongodb.com/docs/atlas/security-whitelist/');
+            console.error('Could not connect to any servers in your MongoDB Atlas cluster. Make sure your current IP address is on your Atlas cluster\'s IP whitelist.');
         } else if (error.name === 'MongoParseError') {
             console.error('Invalid MongoDB connection string. Please check your MONGO_URI in .env file.');
         } else if (error.name === 'MongoNetworkError') {

@@ -105,11 +105,57 @@ const login = async (req, res) => {
 
         console.log(`Login attempt for email: ${email}`);
         
-        // Start with a lean query for better performance
+        // Try more efficient direct database connection first (faster in serverless)
+        try {
+            const { getDb } = require('../config/db');
+            const db = getDb();
+            
+            // Find user with direct MongoDB query (much faster than mongoose)
+            const user = await db.collection('users').findOne({ email });
+            
+            if (!user) {
+                console.log(`Login failed: No user found with email ${email}`);
+                return res.status(401).json({ message: 'Invalid credentials' });
+            }
+            
+            // Compare passwords
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
+                console.log(`Login failed: Password mismatch for ${email}`);
+                return res.status(401).json({ message: 'Invalid credentials' });
+            }
+            
+            // Generate JWT token
+            const token = jwt.sign(
+                { id: user._id, role: user.role },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRE || '7d' }
+            );
+            
+            // Update last login time in background (don't await)
+            db.collection('users').updateOne(
+                { _id: user._id },
+                { $set: { lastLogin: new Date() } }
+            ).catch(err => console.error(`Failed to update last login: ${err.message}`));
+            
+            // Return user data without password
+            const { password: _, ...userData } = user;
+            
+            console.log(`Login successful for ${email}`);
+            return res.status(200).json({
+                token,
+                user: userData
+            });
+        } catch (directError) {
+            console.error(`Direct MongoDB login failed: ${directError.message}. Trying mongoose...`);
+            // Continue to mongoose method if direct method fails
+        }
+        
+        // Fallback to mongoose if direct MongoDB client is not available
         const user = await User.findOne({ email })
-            .select('+password') // Explicitly include password field
+            .select('+password')
             .lean()
-            .maxTimeMS(5000) // Set 5 second timeout for the query 
+            .maxTimeMS(5000) // Set 5 second timeout for the query
             .exec();
         
         if (!user) {

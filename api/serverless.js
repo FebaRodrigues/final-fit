@@ -4,9 +4,20 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const path = require('path');
 
 // Create the Express app
 const app = express();
+
+// Set up multer for handling file uploads
+const storage = multer.memoryStorage(); // Store files in memory
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max file size
+  }
+});
 
 // CORS configuration
 app.use(cors({
@@ -426,6 +437,91 @@ app.post('/api/user/register', async (req, res) => {
   }
 });
 
+// Plural version of user registration endpoint (to match frontend URL)
+app.post('/api/users/register', upload.single('image'), async (req, res) => {
+  console.log('Plural users registration endpoint hit:', new Date().toISOString());
+  try {
+    // Get form data (support multipart/form-data for image upload)
+    const name = req.body.name;
+    const email = req.body.email;
+    const password = req.body.password;
+    
+    console.log('Registration attempt with:', { 
+      name, 
+      email, 
+      hasPassword: !!password,
+      hasImage: !!req.file
+    });
+    
+    // Validate input
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    const User = getModel('User', userSchema);
+    
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+    
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    // Process image if uploaded
+    let imageUrl = null;
+    if (req.file) {
+      // In a real production app, you would upload to a service like AWS S3, Cloudinary, etc.
+      // For this example, we'll pretend we saved it and return a dummy URL
+      imageUrl = `https://via.placeholder.com/150?text=${encodeURIComponent(name)}`;
+      console.log('Processed image for user:', imageUrl);
+    }
+    
+    // Create user
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role: 'user',
+      image: imageUrl
+    });
+    
+    await user.save();
+    
+    // Generate token
+    const token = jwt.sign(
+      { id: user._id, role: 'user' },
+      process.env.JWT_SECRET || 'fallback-jwt-secret',
+      { expiresIn: '1d' }
+    );
+    
+    res.status(201).json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: 'user',
+        image: user.image
+      }
+    });
+  } catch (error) {
+    console.error('Users (plural) registration error:', error);
+    res.status(500).json({ 
+      message: 'Server error during registration',
+      error: error.message 
+    });
+  }
+});
+
 // User login
 app.post('/api/user/login', async (req, res) => {
   console.log('User login endpoint hit:', new Date().toISOString());
@@ -479,6 +575,65 @@ app.post('/api/user/login', async (req, res) => {
     });
   } catch (error) {
     console.error('User login error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Plural version of user login endpoint (to match frontend URL)
+app.post('/api/users/login', async (req, res) => {
+  console.log('Plural users login endpoint hit:', new Date().toISOString());
+  try {
+    const { email, password } = req.body;
+    
+    console.log('Login attempt for:', email);
+    
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    const User = getModel('User', userSchema);
+    
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // Generate token
+    const token = jwt.sign(
+      { id: user._id, role: 'user' },
+      process.env.JWT_SECRET || 'fallback-jwt-secret',
+      { expiresIn: '1d' }
+    );
+    
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+    
+    res.status(200).json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: 'user'
+      }
+    });
+  } catch (error) {
+    console.error('Users (plural) login error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

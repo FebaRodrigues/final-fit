@@ -734,8 +734,21 @@ app.get('/api/admin/users', authMiddleware, adminMiddleware, async (req, res) =>
     
     const total = await User.countDocuments();
     
+    // Format users to match frontend expectations
+    const formattedUsers = users.map(user => ({
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      membershipType: user.membershipType || 'basic',
+      fitnessLevel: user.fitnessLevel || 'beginner',
+      profileCompleted: user.profileCompleted || false,
+      createdAt: user.createdAt
+    }));
+    
+    // Return data in format expected by frontend
     res.status(200).json({
-      users,
+      data: formattedUsers,
       pagination: {
         total,
         page,
@@ -773,8 +786,21 @@ app.get('/api/admin/trainers', authMiddleware, adminMiddleware, async (req, res)
     
     const total = await Trainer.countDocuments();
     
+    // Format trainers to match frontend expectations
+    const formattedTrainers = trainers.map(trainer => ({
+      id: trainer._id.toString(),
+      name: trainer.name,
+      email: trainer.email,
+      role: trainer.role,
+      specialization: trainer.specialization || [],
+      experience: trainer.experience || 0,
+      bio: trainer.bio || '',
+      createdAt: trainer.createdAt
+    }));
+    
+    // Return data in format expected by frontend
     res.status(200).json({
-      trainers,
+      data: formattedTrainers,
       pagination: {
         total,
         page,
@@ -820,17 +846,27 @@ app.get('/api/admin/statistics', authMiddleware, adminMiddleware, async (req, re
       createdAt: { $gte: newUserDate }
     });
     
+    // Return data in consistent format
     res.status(200).json({
-      statistics: {
+      data: {
         userCount,
         trainerCount,
         activeUsers,
-        newUsers
-      }
+        newUsers,
+        recentActivity: {
+          activeUsers,
+          newUsers
+        }
+      },
+      success: true
     });
   } catch (error) {
     console.error('Admin statistics error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      success: false 
+    });
   }
 });
 

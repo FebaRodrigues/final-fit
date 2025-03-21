@@ -14,6 +14,7 @@ const {
 } = require('../controllers/userController');
 const { auth } = require('../middleware/auth');
 const router = express.Router();
+const User = require('../models/User');
 
 // Debug middleware for file uploads
 const debugUpload = (req, res, next) => {
@@ -59,7 +60,79 @@ router.post('/login', login);
 
 router.get('/', auth(['admin']), getAllUsers);
 
-router.get('/profile', auth(['user']), getProfile);
+router.get('/profile', auth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log(`Getting profile for user ${userId}`);
+        
+        try {
+            // First try mongoose
+            const user = await User.findById(userId).select('-password');
+            
+            if (!user) {
+                console.log(`User not found in database: ${userId}`);
+                return res.status(404).json({ error: 'User not found' });
+            }
+            
+            console.log(`Retrieved profile for user ${userId} using mongoose`);
+            return res.status(200).json(user);
+            
+        } catch (mongooseError) {
+            console.warn(`Mongoose query failed for profile: ${mongooseError.message}`);
+            console.log('Trying direct MongoDB client as fallback');
+            
+            try {
+                // Get the direct MongoDB client
+                const { getDb } = require('../config/db');
+                const db = getDb();
+                
+                // Convert string ID to ObjectId
+                const { ObjectId } = require('mongodb');
+                let userIdObj;
+                
+                try {
+                    userIdObj = new ObjectId(userId);
+                } catch (idError) {
+                    console.error('Error converting userId to ObjectId:', idError);
+                    userIdObj = userId; // fallback to string ID
+                }
+                
+                // Find the user with the direct client
+                const user = await db.collection('users').findOne({ _id: userIdObj });
+                
+                if (!user) {
+                    console.log(`No user found with ID: ${userId}`);
+                    return res.status(404).json({ error: 'User not found' });
+                }
+                
+                // Remove password from response
+                if (user.password) {
+                    delete user.password;
+                }
+                
+                console.log(`Retrieved profile for user ${userId} using direct MongoDB client (fallback)`);
+                return res.status(200).json(user);
+                
+            } catch (directError) {
+                console.error('Direct MongoDB client fallback also failed:', directError.message);
+                console.log('Using token data as last resort fallback');
+                
+                // Use token data as last resort
+                return res.status(200).json({
+                    _id: userId,
+                    name: req.user.name || "User",
+                    email: req.user.email || "user@example.com",
+                    role: req.user.role || "user",
+                    image: "https://res.cloudinary.com/daacjyk3d/image/upload/v1740376690/fitnessApp/gfo0vamcfcurte2gc4jk.jpg",
+                    _fallback: true
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error getting user profile:', error);
+        return res.status(500).json({ error: error.message || 'Error retrieving user profile' });
+    }
+});
 
 router.get('/:userId', auth(['admin', 'trainer']), getUserById);
 
@@ -109,6 +182,79 @@ router.post('/login-test', async (req, res) => {
     console.error('Test login error:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
+});
+
+// Add a direct client version of the profile endpoint
+router.get('/profile-direct', auth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log(`Getting profile for user ${userId} using direct MongoDB client`);
+        
+        // Get the direct MongoDB client
+        const { getDb } = require('../config/db');
+        
+        try {
+            const db = getDb();
+            console.log('Successfully obtained MongoDB client for profile fetch');
+            
+            // Convert string ID to ObjectId if needed
+            const { ObjectId } = require('mongodb');
+            let userIdObj;
+            
+            try {
+                userIdObj = new ObjectId(userId);
+            } catch (idError) {
+                console.error('Error converting userId to ObjectId:', idError);
+                userIdObj = userId; // fallback to string ID
+            }
+            
+            // Find the user with the direct client
+            const user = await db.collection('users').findOne({ _id: userIdObj });
+            
+            if (!user) {
+                console.log(`No user found with ID: ${userId}`);
+                return res.status(404).json({ error: 'User not found' });
+            }
+            
+            // Remove password from response
+            if (user.password) {
+                delete user.password;
+            }
+            
+            console.log(`Retrieved profile for user ${userId} using direct MongoDB client`);
+            return res.status(200).json(user);
+            
+        } catch (dbError) {
+            console.error('Error with direct MongoDB client:', dbError);
+            throw new Error(`Direct MongoDB client error: ${dbError.message}`);
+        }
+    } catch (error) {
+        console.error('Error getting user profile with direct client:', error);
+        return res.status(500).json({ 
+            error: error.message || 'Error retrieving user profile',
+            suggestion: 'Try using the test login endpoint if database issues persist' 
+        });
+    }
+});
+
+// Add a mock profile endpoint for when MongoDB is completely unavailable
+router.get('/profile-fallback', auth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log(`Providing fallback profile data for user ${userId}`);
+        
+        // Return basic profile info from the JWT token
+        return res.status(200).json({
+            _id: userId,
+            name: req.user.name || "User",
+            email: req.user.email || "user@example.com",
+            role: req.user.role || "user",
+            image: "https://res.cloudinary.com/daacjyk3d/image/upload/v1740376690/fitnessApp/gfo0vamcfcurte2gc4jk.jpg"
+        });
+    } catch (error) {
+        console.error('Error in fallback profile endpoint:', error);
+        return res.status(500).json({ error: 'Server error with fallback profile' });
+    }
 });
 
 module.exports = router;

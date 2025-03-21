@@ -138,11 +138,51 @@ exports.authenticateUser = async (req, res, next) => {
   }
 };
 
+// Enhanced auth middleware that adds user details to the req object
+const enhancedAuth = async (req, res, next) => {
+    try {
+        // Get token from header
+        const token = req.header('x-auth-token');
+
+        // Check if token exists
+        if (!token) {
+            console.log('No token, authorization denied');
+            return res.status(401).json({ error: 'No token, authorization denied' });
+        }
+
+        try {
+            console.log('Verifying token');
+            // Verify token
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            
+            // Add decoded user data to request
+            req.user = decoded;
+            
+            // Try to get additional user data from the token payload
+            // This allows us to provide fallback functionality if the DB is down
+            if (decoded.email) req.user.email = decoded.email;
+            if (decoded.name) req.user.name = decoded.name;
+            if (decoded.role) req.user.role = decoded.role;
+            
+            console.log(`Auth successful for user ${decoded.id}`);
+            next();
+        } catch (err) {
+            console.error('Token verification failed:', err.message);
+            return res.status(401).json({ error: 'Token is not valid' });
+        }
+    } catch (err) {
+        console.error('Auth middleware error:', err.message);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Export both middleware options
 module.exports = {
   auth: exports.auth,
   authenticateUser: exports.authenticateUser,
   authenticateTrainer: exports.authenticateTrainer,
-  authenticateAdmin: exports.authenticateAdmin
+  authenticateAdmin: exports.authenticateAdmin,
+  enhancedAuth: enhancedAuth
 };
 
 

@@ -58,8 +58,16 @@ try {
 // Create the Express app
 const app = express();
 
-// IMPORTANT: Add direct debug endpoints BEFORE any other middleware
-// These endpoints will be available even if other routes have issues
+// CRITICAL: Apply CORS configuration first before any other middleware
+// Use our custom CORS handler for fine-grained control
+app.use(corsMiddleware);
+
+// Add a special handler for OPTIONS requests to ensure CORS preflight works
+app.options('*', (req, res) => {
+  console.log('Handling OPTIONS preflight request in global handler');
+  // The corsMiddleware should have set the appropriate headers
+  res.status(200).end();
+});
 
 // Very simple debug endpoint that doesn't require any imports or middleware
 app.get('/debug', (req, res) => {
@@ -103,12 +111,9 @@ app.get('/api/direct-debug', (req, res) => {
   });
 });
 
-// First, apply a custom CORS middleware for added flexibility
-app.use(corsMiddleware);
-
-// Then use the standard cors module with proper configuration
+// Standard CORS middleware as a fallback
 app.use(cors({
-  origin: 'https://final-fit-frontend.vercel.app',
+  origin: ['https://final-fit-frontend.vercel.app', 'http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'x-auth-token'],
@@ -150,6 +155,19 @@ app.get('/api/health', (req, res) => {
     mongodb: {
       connectionStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
       database: mongoose.connection.db?.databaseName || 'not connected'
+    }
+  });
+});
+
+// Add a CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+  res.status(200).json({
+    message: 'CORS is working correctly',
+    timestamp: new Date().toISOString(),
+    receivedHeaders: {
+      origin: req.headers.origin,
+      referer: req.headers.referer,
+      host: req.headers.host
     }
   });
 });

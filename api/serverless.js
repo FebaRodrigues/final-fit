@@ -398,6 +398,19 @@ const mealSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Define Payment schema inline
+const paymentSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+  amount: { type: Number, required: true },
+  currency: { type: String, default: 'USD' },
+  plan: { type: String, required: true, enum: ['basic', 'premium', 'unlimited'] },
+  status: { type: String, default: 'completed', enum: ['pending', 'completed', 'failed', 'refunded'] },
+  paymentMethod: { type: String, default: 'card' },
+  paymentId: { type: String },
+  description: { type: String },
+  createdAt: { type: Date, default: Date.now }
+});
+
 // MongoDB Connection
 // =================
 
@@ -2159,6 +2172,314 @@ app.get('/api/nutrition/summary/:userId', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Get nutrition summary error:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// PAYMENT ROUTES
+// ==============
+
+// Get user payment history
+app.get('/api/payments/user/:userId', authMiddleware, async (req, res) => {
+  console.log('Get user payments endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { userId } = req.params;
+    
+    // Basic validation
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+    
+    // Verify user has permission to access these payments
+    if (req.user.role !== 'admin' && req.user.id !== userId) {
+      return res.status(403).json({ message: 'Not authorized to access these payments' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Payment = getModel('Payment', paymentSchema);
+    
+    // Optional query parameters
+    const { limit = 10, page = 1, status } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Build query
+    const query = { userId };
+    if (status) query.status = status;
+    
+    // Get payments
+    const payments = await Payment.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Payment.countDocuments(query);
+    
+    // No payments yet? Return empty array
+    if (payments.length === 0) {
+      return res.status(200).json({
+        payments: [],
+        pagination: {
+          total: 0,
+          page: parseInt(page),
+          pages: 0
+        },
+        success: true
+      });
+    }
+    
+    // Format payments for response
+    const formattedPayments = payments.map(payment => ({
+      id: payment._id.toString(),
+      userId: payment.userId.toString(),
+      amount: payment.amount,
+      currency: payment.currency,
+      plan: payment.plan,
+      status: payment.status,
+      paymentMethod: payment.paymentMethod,
+      paymentId: payment.paymentId,
+      description: payment.description || '',
+      createdAt: payment.createdAt
+    }));
+    
+    // Return response
+    return res.status(200).json({
+      payments: formattedPayments,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit))
+      },
+      success: true
+    });
+  } catch (error) {
+    console.error('Get payments error:', error);
+    // Return empty payments on error
+    return res.status(200).json({
+      payments: [],
+      pagination: {
+        total: 0,
+        page: 1,
+        pages: 0
+      },
+      error: error.message,
+      success: false
+    });
+  }
+});
+
+// Create a new membership with payment
+app.post('/api/memberships', authMiddleware, async (req, res) => {
+  console.log('Create membership endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { plan, paymentMethod, amount } = req.body;
+    
+    // Basic validation
+    if (!plan) {
+      return res.status(400).json({ message: 'Plan type is required' });
+    }
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the models
+    const Membership = getModel('Membership', membershipSchema);
+    const Payment = getModel('Payment', paymentSchema);
+    
+    // Set end date based on plan (30 days for basic, 90 for premium, 365 for unlimited)
+    const today = new Date();
+    const endDate = new Date();
+    
+    // Normalize plan name for database
+    const normalizedPlan = plan.type?.toLowerCase() || plan.toLowerCase();
+    
+    // Determine duration and features based on plan
+    let duration = 30; // default to 30 days
+    const planType = normalizedPlan === 'premium' ? 'premium' : 
+                     normalizedPlan === 'unlimited' ? 'unlimited' : 'basic';
+    
+    switch (planType) {
+      case 'premium':
+        duration = 90;
+        break;
+      case 'unlimited':
+        duration = 365;
+        break;
+      default: // basic
+        duration = 30;
+    }
+    
+    endDate.setDate(today.getDate() + duration);
+    
+    // Generate features based on plan
+    let features = ['workout_tracking', 'meal_planning'];
+    if (planType === 'premium' || planType === 'unlimited') {
+      features.push('trainer_consultation', 'personalized_plans');
+    }
+    if (planType === 'unlimited') {
+      features.push('premium_content', 'priority_support', 'group_classes');
+    }
+    
+    // Create payment record first
+    const paymentId = `payment-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const payment = new Payment({
+      userId: req.user.id,
+      amount: amount || (planType === 'basic' ? 1199 : (planType === 'premium' ? 1999 : 2999)),
+      currency: 'USD',
+      plan: planType,
+      status: 'completed',
+      paymentMethod: paymentMethod || 'card',
+      paymentId,
+      description: `Membership subscription: ${planType} plan for ${duration} days`
+    });
+    
+    await payment.save();
+    
+    // Create membership
+    const membership = new Membership({
+      userId: req.user.id,
+      plan: planType,
+      startDate: today,
+      endDate,
+      paymentId,
+      status: 'active',
+      features,
+      renewalPrice: planType === 'basic' ? 9.99 : (planType === 'premium' ? 19.99 : 29.99),
+      autoRenew: false
+    });
+    
+    await membership.save();
+    
+    // Return success with both objects
+    return res.status(201).json({
+      membership: {
+        id: membership._id.toString(),
+        userId: membership.userId.toString(),
+        plan: membership.plan,
+        startDate: membership.startDate,
+        endDate: membership.endDate,
+        status: membership.status,
+        features: membership.features,
+        renewalPrice: membership.renewalPrice,
+        autoRenew: membership.autoRenew
+      },
+      payment: {
+        id: payment._id.toString(),
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        paymentId: payment.paymentId
+      },
+      success: true,
+      message: 'Membership created successfully'
+    });
+  } catch (error) {
+    console.error('Create membership error:', error);
+    return res.status(500).json({ 
+      message: 'Failed to create membership',
+      error: error.message,
+      success: false
+    });
+  }
+});
+
+// Create payment intent (for Stripe integration)
+app.post('/api/payments/create-intent', authMiddleware, async (req, res) => {
+  console.log('Create payment intent endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { plan, amount } = req.body;
+    
+    if (!plan) {
+      return res.status(400).json({ message: 'Plan is required' });
+    }
+    
+    // In a real app, this would create a Stripe payment intent
+    // For this mock implementation, we'll just return a success response
+    
+    // Simulate a successful payment intent creation
+    return res.status(200).json({
+      clientSecret: `pi_mock_${Date.now()}_secret_${Math.random().toString(36).substring(2, 10)}`,
+      amount: amount || 1999,
+      currency: 'USD',
+      success: true
+    });
+  } catch (error) {
+    console.error('Create payment intent error:', error);
+    return res.status(500).json({ 
+      message: 'Failed to create payment intent',
+      error: error.message,
+      success: false
+    });
+  }
+});
+
+// Process successful payment
+app.post('/api/payments/confirm', authMiddleware, async (req, res) => {
+  console.log('Payment confirmation endpoint hit:', new Date().toISOString());
+  
+  try {
+    const { paymentIntentId, plan } = req.body;
+    
+    if (!paymentIntentId || !plan) {
+      return res.status(400).json({ message: 'Payment intent ID and plan are required' });
+    }
+    
+    // In a real app, this would verify the payment with Stripe
+    // For now, we'll just simulate a successful payment
+    
+    // Connect to MongoDB
+    const connected = await connectDB();
+    if (!connected) {
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+    
+    // Get the model
+    const Payment = getModel('Payment', paymentSchema);
+    
+    // Record the payment
+    const planType = plan.type?.toLowerCase() || plan.toLowerCase();
+    const payment = new Payment({
+      userId: req.user.id,
+      amount: plan.price || (planType === 'basic' ? 1199 : (planType === 'premium' ? 1999 : 2999)),
+      currency: 'USD',
+      plan: planType,
+      status: 'completed',
+      paymentMethod: 'card',
+      paymentId: paymentIntentId,
+      description: `Membership subscription: ${planType} plan`
+    });
+    
+    await payment.save();
+    
+    // Return success
+    return res.status(200).json({
+      payment: {
+        id: payment._id.toString(),
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        paymentId: payment.paymentId
+      },
+      success: true,
+      message: 'Payment confirmed successfully'
+    });
+  } catch (error) {
+    console.error('Payment confirmation error:', error);
+    return res.status(500).json({ 
+      message: 'Failed to confirm payment',
+      error: error.message,
+      success: false
+    });
   }
 });
 

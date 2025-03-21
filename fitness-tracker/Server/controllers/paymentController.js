@@ -260,194 +260,64 @@ const sendPaymentOTP = async (req, res) => {
 };
 
 const verifyPaymentOTP = async (req, res) => {
-  const { otp, userId } = req.body;
-  
   try {
-    console.log(`[${new Date().toISOString()}] === OTP VERIFICATION ATTEMPT ===`);
-    console.log(`Request body:`, JSON.stringify(req.body));
-    console.log(`Headers:`, JSON.stringify({
-      'content-type': req.headers['content-type'],
-      'user-agent': req.headers['user-agent'],
-      'origin': req.headers['origin'],
-      'host': req.headers['host']
-    }));
+    console.log(`OTP Verification Request at ${new Date().toISOString()}:`, req.body);
+    const { otp, userId } = req.body;
     
-    // Enhanced logging for debugging
-    const sessionDebug = {
-      hasSession: !!req.session,
-      hasOTPinSession: !!(req.session && req.session.otp),
-      sessionID: req.session?.id || 'none'
-    };
-    console.log('Session debug info:', sessionDebug);
-    
-    // Validate input
     if (!otp || !userId) {
-      console.error('OTP verification failed: Missing required fields', { otp: !!otp, userId: !!userId });
       return res.status(400).json({ 
-        message: 'OTP and userId are required',
-        debug: { 
-          sessionDebug,
-          timestamp: new Date().toISOString(),
-          requiredFields: { otp: !!otp, userId: !!userId }
-        }
+        message: 'OTP and userId are required'
       });
     }
-
-    // Convert values to strings to ensure consistent comparison
+    
+    // Convert to strings for consistent comparison
     const otpString = otp.toString();
     const userIdString = userId.toString();
-    const currentTime = new Date();
     
-    console.log(`Looking for OTP in database for userId: "${userIdString}" with code: "${otpString}"`);
+    console.log(`Looking for OTP in database: userId=${userIdString}, otp=${otpString}`);
     
-    // Directly check the database for valid OTPs
-    try {
-      // First log all OTPs for this user for debugging purposes
-      const allUserOTPs = await OTP.find({ 
-        userId: { $in: [userIdString, userId] } // Search for both string and ObjectId formats
+    // Attempt to find a valid OTP in the database
+    const dbOTP = await OTP.findOne({
+      code: otpString,
+      isUsed: false,
+      expires: { $gt: new Date() }
+    });
+    
+    // If no valid OTP found
+    if (!dbOTP) {
+      console.log('No valid OTP found in database');
+      return res.status(400).json({ 
+        message: 'Invalid or expired OTP. Please request a new OTP.'
       });
-      
-      console.log(`Found ${allUserOTPs.length} OTPs in database for user:`, 
-        allUserOTPs.map(o => ({
-          id: o._id, 
-          code: o.code, 
-          userId: o.userId,
-          userIdType: typeof o.userId,
-          isUsed: o.isUsed, 
-          expires: o.expires,
-          isExpired: o.expires < currentTime
-        }))
-      );
-      
-      // If no OTPs found at all, try checking with a loose match on userId
-      if (allUserOTPs.length === 0) {
-        console.log('No exact OTPs found, checking with loose userId match...');
-        
-        // Try with a regex pattern on the string form of userId
-        const looseUserOTPs = await OTP.find({});
-        
-        console.log('All OTPs in database:', looseUserOTPs.map(o => ({
-          id: o._id,
-          code: o.code,
-          userId: o.userId,
-          userIdType: typeof o.userId,
-          userIdMatches: o.userId.toString().includes(userIdString) || userIdString.includes(o.userId.toString()),
-          isUsed: o.isUsed,
-          expires: o.expires
-        })));
-        
-        // If still no OTPs found, return error
-        if (looseUserOTPs.length === 0) {
-          console.error('No OTPs found in the entire database');
-          return res.status(400).json({ 
-            message: 'No OTP records found in the system. Please request a new OTP.',
-            debug: {
-              sessionDebug,
-              databaseCheck: 'No OTPs found in database',
-              userId: userIdString,
-              timestamp: new Date().toISOString()
-            }
-          });
-        }
-      }
-      
-      // Now look for a valid, unused OTP
-      const dbOTP = await OTP.findOne({
-        userId: { $in: [userIdString, userId] }, // Search for both string and ObjectId formats
-        code: otpString,
-        isUsed: false,
-        expires: { $gt: currentTime }
+    }
+    
+    // Mark OTP as used
+    dbOTP.isUsed = true;
+    await dbOTP.save();
+    console.log('OTP marked as used in database');
+    
+    // Find any pending membership for this user
+    const pendingMembership = await Membership.findOne({ 
+      userId, 
+      status: 'Pending' 
+    }).sort({ createdAt: -1 });
+    
+    if (pendingMembership) {
+      console.log('Found pending membership:', pendingMembership._id);
+      return res.status(200).json({ 
+        message: 'OTP verified successfully',
+        pendingMembership: pendingMembership
       });
-      
-      // If no valid OTP found
-      if (!dbOTP) {
-        // Check if there was an OTP but it's expired or used
-        const expiredOrUsedOTP = await OTP.findOne({
-          userId: { $in: [userIdString, userId] },
-          code: otpString
-        });
-        
-        let errorMessage = 'Invalid OTP. Please request a new OTP.';
-        let errorReason = 'not_found';
-        
-        if (expiredOrUsedOTP) {
-          if (expiredOrUsedOTP.expires < currentTime) {
-            errorMessage = 'OTP has expired. Please request a new OTP.';
-            errorReason = 'expired';
-          } else if (expiredOrUsedOTP.isUsed) {
-            errorMessage = 'OTP has already been used. Please request a new OTP.';
-            errorReason = 'already_used';
-          }
-        }
-        
-        console.error(`OTP verification failed: ${errorReason}`);
-        return res.status(400).json({ 
-          message: errorMessage,
-          errorReason,
-          debug: {
-            sessionDebug,
-            databaseCheck: errorReason,
-            expiredOrUsed: !!expiredOrUsedOTP,
-            userId: userIdString,
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-      
-      console.log('Valid OTP found in database:', dbOTP._id);
-      
-      // Mark OTP as used
-      dbOTP.isUsed = true;
-      await dbOTP.save();
-      console.log('OTP marked as used in database');
-      
-      // Find any pending membership for this user
-      const pendingMembership = await Membership.findOne({ 
-        userId: { $in: [userIdString, userId] }, 
-        status: 'Pending' 
-      }).sort({ createdAt: -1 });
-
-      if (pendingMembership) {
-        console.log('Found pending membership:', pendingMembership);
-        
-        // Return success response with membership info
-        return res.status(200).json({ 
-          message: 'OTP verified successfully',
-          pendingMembership: pendingMembership,
-          verificationMethod: 'database',
-          timestamp: new Date().toISOString()
-        });
-      } else {
-        console.log('No pending membership found for user');
-        // Return success response without membership info
-        return res.status(200).json({ 
-          message: 'OTP verified successfully',
-          verificationMethod: 'database',
-          timestamp: new Date().toISOString()
-        });
-      }
-    } catch (dbError) {
-      console.error('Database error during OTP verification:', dbError);
-      return res.status(500).json({ 
-        message: 'Error verifying OTP: Database error',
-        error: dbError.message,
-        debug: {
-          timestamp: new Date().toISOString(),
-          errorType: dbError.name,
-          errorStack: process.env.NODE_ENV === 'development' ? dbError.stack : undefined
-        }
+    } else {
+      console.log('No pending membership found');
+      return res.status(200).json({ 
+        message: 'OTP verified successfully'
       });
     }
   } catch (error) {
     console.error('OTP verification error:', error);
-    
     return res.status(500).json({ 
-      message: 'Failed to verify OTP: ' + error.message,
-      debug: {
-        timestamp: new Date().toISOString(),
-        errorType: error.name,
-        errorStack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      }
+      message: 'Failed to verify OTP: ' + error.message
     });
   }
 };

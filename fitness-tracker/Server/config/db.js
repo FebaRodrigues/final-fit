@@ -146,6 +146,29 @@ const getDb = () => {
     throw new Error('No database connection available');
 };
 
+// Function to get the MongoDB client
+const getClient = () => {
+    if (cachedConnection) {
+        return cachedConnection; // Direct client
+    }
+    
+    if (mongoose.connection.readyState === 1) {
+        return mongoose.connection.getClient(); // Mongoose client
+    }
+    
+    throw new Error('No client connection available');
+};
+
+// Check if we're using direct client or mongoose
+const isDirect = () => {
+    return !!cachedDb && !!cachedConnection && !(cachedConnection instanceof mongoose.Connection);
+};
+
+// Check if mongoose is ready
+const isMongooseReady = () => {
+    return mongoose.connection.readyState === 1;
+};
+
 // Handle application termination
 process.on('SIGINT', async () => {
     if (cachedConnection) {
@@ -164,4 +187,7 @@ process.on('SIGINT', async () => {
 module.exports = connectDB;
 // Export the getDb function for direct client access
 module.exports.getDb = getDb;
+module.exports.getClient = getClient;
+module.exports.isDirect = isDirect;
+module.exports.isMongooseReady = isMongooseReady;
 

@@ -243,12 +243,36 @@ exports.manageUsers = async (req, res) => {
 // Get a user by ID
 exports.getUserById = async (req, res) => {
     const { userId } = req.params;
+    
     try {
-        const user = await User.findById(userId).select('-password');
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        // Validate userId
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID is required' });
+        }
+        
+        // Validate that userId is a valid MongoDB ObjectId
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ message: 'Invalid user ID format' });
+        }
+        
+        // Use lean() for better performance in read-only operations
+        const user = await User.findById(userId)
+            .select('-password')
+            .lean()
+            .maxTimeMS(5000) // Set timeout to avoid long-running queries
+            .exec();
+            
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
         res.status(200).json(user);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Admin getUserById error:', error);
+        res.status(500).json({ 
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 

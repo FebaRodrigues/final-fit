@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const { performance } = require('perf_hooks');
 const router = express.Router();
 const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
+const path = require('path');
+const { uploadToCloudinary } = require('../utilities/imageUpload');
 
 // Health status endpoint - explicit CORS headers to ensure it can be reached for debugging
 router.get('/', async (req, res) => {
@@ -165,6 +168,77 @@ router.get('/db-check', async (req, res) => {
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
+});
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+        cb(null, path.join(__dirname, '../uploads/'));
+    },
+    filename: function(req, file, cb) {
+        cb(null, `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`);
+    }
+});
+
+const upload = multer({ 
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: function(req, file, cb) {
+        // Accept images only
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+            return cb(new Error('Only image files are allowed!'), false);
+        }
+        cb(null, true);
+    }
+});
+
+// Test upload endpoint
+router.post('/test-upload', upload.single('file'), async (req, res) => {
+    // Add explicit CORS headers
+    const origin = req.headers.origin;
+    if (origin) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+    }
+    
+    try {
+        if (!req.file) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'No file uploaded' 
+            });
+        }
+        
+        console.log('File received:', req.file.path);
+        
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(req.file.path);
+        
+        if (!result) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to upload file to Cloudinary'
+            });
+        }
+        
+        return res.status(200).json({
+            success: true,
+            message: 'File uploaded successfully',
+            file: {
+                url: result.secure_url,
+                publicId: result.public_id,
+                format: result.format,
+                size: result.bytes
+            }
+        });
+    } catch (error) {
+        console.error('Test upload error:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Upload failed',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
 });
 
 module.exports = router;

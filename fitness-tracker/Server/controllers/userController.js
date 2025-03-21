@@ -97,111 +97,66 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        console.log(`Login attempt for email: ${email}`);
-
-        // Validate email and password
+        
+        // Validate required fields
         if (!email || !password) {
-            console.log('Login failed: Missing email or password');
             return res.status(400).json({ message: 'Email and password are required' });
         }
 
-        let user = null;
+        console.log(`Login attempt for email: ${email}`);
         
-        try {
-            // First try mongoose
-            user = await User.findOne({ email });
-        } catch (mongooseError) {
-            console.warn(`Mongoose query failed for login: ${mongooseError.message}`);
-            console.log('Trying direct MongoDB client as fallback');
-            
-            try {
-                // Get the direct MongoDB client
-                const { getDb } = require('../config/db');
-                const db = getDb();
-                
-                // Find the user with the direct client
-                user = await db.collection('users').findOne({ email });
-                console.log(`Found user with direct client: ${user ? 'Yes' : 'No'}`);
-            } catch (directError) {
-                console.error('Direct MongoDB client fallback also failed:', directError.message);
-                throw new Error(`Database error: ${directError.message}`);
-            }
-        }
-
+        // Start with a lean query for better performance
+        const user = await User.findOne({ email })
+            .select('+password') // Explicitly include password field
+            .lean()
+            .maxTimeMS(5000) // Set 5 second timeout for the query 
+            .exec();
+        
         if (!user) {
             console.log(`Login failed: No user found with email ${email}`);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-
-        // Check password
+        
+        // Compare passwords
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            console.log(`Login failed: Invalid password for user with email ${email}`);
+            console.log(`Login failed: Password mismatch for ${email}`);
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-
-        // Create and sign JWT token
-        const payload = {
-            id: user._id,
-            role: user.role,
-            name: user.name,
-            email: user.email
-        };
-
-        jwt.sign(
-            payload,
+        
+        // Update last login time (use findByIdAndUpdate to avoid another fetch)
+        try {
+            await User.findByIdAndUpdate(
+                user._id, 
+                { lastLogin: new Date() },
+                { new: false, useFindAndModify: false }
+            ).exec();
+        } catch (updateError) {
+            // Non-critical error, just log it but continue with login
+            console.error(`Failed to update last login time for ${email}:`, updateError.message);
+        }
+        
+        // Generate JWT token
+        const token = jwt.sign(
+            { id: user._id, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '24h' },
-            (err, token) => {
-                if (err) {
-                    console.error(`Error creating JWT token: ${err.message}`);
-                    return res.status(500).json({ message: 'Error creating token' });
-                }
-
-                // Update last login time
-                try {
-                    // Try to update with whichever method was used to find the user
-                    if (user._id) {
-                        if (typeof User.findByIdAndUpdate === 'function') {
-                            // Use mongoose if it's available
-                            User.findByIdAndUpdate(
-                                user._id,
-                                { lastLogin: new Date() },
-                                { new: true }
-                            ).exec();
-                        } else if (getDb) {
-                            // Use direct client if mongoose failed
-                            const { getDb } = require('../config/db');
-                            const db = getDb();
-                            const { ObjectId } = require('mongodb');
-                            db.collection('users').updateOne(
-                                { _id: typeof user._id === 'string' ? user._id : new ObjectId(user._id) },
-                                { $set: { lastLogin: new Date() } }
-                            );
-                        }
-                    }
-                } catch (updateError) {
-                    console.warn(`Could not update last login time: ${updateError.message}`);
-                    // Non-critical, continue with login
-                }
-
-                console.log(`Login successful for user: ${email}`);
-                return res.status(200).json({
-                    message: 'Login successful',
-                    user: {
-                        id: user._id,
-                        name: user.name,
-                        email: user.email,
-                        role: user.role,
-                        image: user.image
-                    },
-                    token
-                });
-            }
+            { expiresIn: process.env.JWT_EXPIRE || '7d' }
         );
+        
+        // Return user data without password
+        const { password: _, ...userData } = user;
+        
+        console.log(`Login successful for ${email}`);
+        return res.status(200).json({
+            token,
+            user: userData
+        });
     } catch (error) {
-        console.error(`Login error: ${error.message}`);
-        return res.status(500).json({ message: 'Server error', error: error.message });
+        console.error('Login error:', error);
+        return res.status(500).json({ 
+            error: error.message || 'Login failed due to server error',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 
@@ -221,12 +176,31 @@ const getAllUsers = async (req, res) => {
 // Get a user by ID
 const getUserById = async (req, res) => {
     try {
-        const userId = req.params.userId || req.user.id;
+        // Safely extract userId with validation
+        const userId = req.params.userId || req.user?.id;
+        
+        // Handle case where userId is missing or invalid
+        if (!userId) {
+            console.error('getUserById: Missing userId in request');
+            return res.status(400).json({ error: 'User ID is required' });
+        }
+        
+        // Validate that userId is a valid MongoDB ObjectId
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            console.error(`getUserById: Invalid userId format: ${userId}`);
+            return res.status(400).json({ error: 'Invalid user ID format' });
+        }
+        
         console.log(`Getting user with ID: ${userId}`);
         
-        const user = await User.findById(userId).select('-password');
+        // Use lean() for better performance in read-only operations
+        const user = await User.findById(userId)
+            .select('-password')
+            .lean()
+            .exec();
         
         if (!user) {
+            console.error(`User not found with ID: ${userId}`);
             return res.status(404).json({ error: 'User not found' });
         }
         

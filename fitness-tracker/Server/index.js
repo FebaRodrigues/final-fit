@@ -109,28 +109,7 @@ app.use(corsMiddleware);
 
 // Then use the standard cors module with proper configuration
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
-    
-    // Whitelist specific origins
-    const whitelist = [
-      'https://final-fit-frontend.vercel.app',
-      'https://final-fit-frontend-dd9nzz0bj-feba-rodrigues-projects.vercel.app',
-      'https://final-fit-frontend-ev7xv9kct-feba-rodrigues-projects.vercel.app'
-    ];
-    
-    // Check if origin is in whitelist or matches vercel.app or localhost
-    if (
-      whitelist.indexOf(origin) !== -1 || 
-      origin.includes('vercel.app') || 
-      origin.includes('localhost')
-    ) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: 'https://final-fit-frontend.vercel.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'x-auth-token'],

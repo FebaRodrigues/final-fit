@@ -8,54 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/generate-new-otp/(.*)",
-      "dest": "index.js",
-      "methods": ["GET"]
-    },
-    {
-      "src": "/verify-any-otp",
-      "dest": "index.js",
-      "methods": ["POST", "OPTIONS"]
-    },
-    {
-      "src": "/emergency-debug",
-      "dest": "index.js",
-      "methods": ["GET"]
-    },
-    {
-      "src": "/emergency-verify-otp",
-      "dest": "index.js",
-      "methods": ["POST", "OPTIONS"]
-    },
-    {
-      "src": "/version",
-      "dest": "index.js",
-      "methods": ["GET"]
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "index.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept, Authorization",
-        "Access-Control-Allow-Credentials": "true"
-      }
-    },
-    {
       "src": "/(.*)",
       "dest": "index.js"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-Requested-With, Content-Type, Accept, Authorization" },
-        { "key": "Access-Control-Allow-Credentials", "value": "true" }
-      ]
     }
   ],
   "env": {

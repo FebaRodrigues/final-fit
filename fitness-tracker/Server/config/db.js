@@ -2,35 +2,16 @@
 
 const mongoose = require('mongoose');
 
-// Track if we've already tried to connect
-let isConnecting = false;
-let connectionEstablished = false;
+// Cache the database connection for serverless environments
+let cachedConnection = null;
 
 const connectDB = async () => {
    try {
-        // If we're already connected, return early
-        if (mongoose.connection.readyState === 1) {
-            console.log('MongoDB connection already established, reusing existing connection');
-            connectionEstablished = true;
+        // If we already have a connection, return it
+        if (cachedConnection && mongoose.connection.readyState === 1) {
+            console.log('Using existing MongoDB connection');
             return;
         }
-
-        // If connection is already in progress, wait for it
-        if (isConnecting) {
-            console.log('MongoDB connection attempt already in progress');
-            // Wait for connection to complete
-            await new Promise(resolve => {
-                const checkConnection = setInterval(() => {
-                    if (connectionEstablished || mongoose.connection.readyState === 1) {
-                        clearInterval(checkConnection);
-                        resolve();
-                    }
-                }, 100);
-            });
-            return;
-        }
-
-        isConnecting = true;
         
         // Use MONGO_URI to match the .env file
         const mongoUri = process.env.MONGO_URI;
@@ -39,16 +20,17 @@ const connectDB = async () => {
             throw new Error('MONGO_URI is not defined in environment variables');
         }
         
-        // Set mongoose options optimized for serverless environments
+        // Set mongoose options for better connection handling in serverless environments
         const options = {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 5000,  // Shorter timeout for serverless
-            connectTimeoutMS: 5000,          // Faster connection timeout
-            socketTimeoutMS: 10000,          // Faster socket timeout
-            maxPoolSize: 5,                  // Limit pool size for serverless
-            minPoolSize: 1,                  // Ensure at least one connection is kept
-            family: 4                        // Use IPv4, avoids issues with some networks
+            serverSelectionTimeoutMS: 5000, // Reduced timeout for serverless
+            connectTimeoutMS: 5000,         // Reduced connection timeout
+            socketTimeoutMS: 30000,         // Reduced socket timeout
+            maxPoolSize: 10,                // Limit connection pool for serverless
+            minPoolSize: 5,                 // Maintain minimum connections
+            maxIdleTimeMS: 10000,           // Close idle connections after 10 seconds
+            bufferCommands: false,          // Disable buffering for faster connect-close cycles
         };
         
         // Display connection details (with sensitive parts masked)
@@ -58,26 +40,35 @@ const connectDB = async () => {
         console.log(`Connection Options: ${JSON.stringify(options, null, 2)}`);
         
         console.log('Connecting to MongoDB Atlas...');
-        await mongoose.connect(mongoUri, options);
         
-        // Connection successful
-        connectionEstablished = true;
-        isConnecting = false;
+        // Connect with retry logic
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                await mongoose.connect(mongoUri, options);
+                cachedConnection = mongoose.connection;
+                break; // Connection successful, exit loop
+            } catch (err) {
+                retries--;
+                if (retries === 0) throw err; // No more retries, propagate error
+                console.log(`Connection attempt failed, retrying... (${retries} attempts left)`);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            }
+        }
         
         // Display more detailed connection information
         const dbName = mongoose.connection.db.databaseName;
         console.log('=== MongoDB Connection Successful ===');
         console.log(`Connected to database: ${dbName}`);
         console.log(`Connection state: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Not connected'}`);
+        console.log(`MongoDB version: ${await mongoose.connection.db.admin().serverInfo().then(info => info.version)}`);
         
-        // Only fetch server info if we're not in a serverless environment
-        if (process.env.NODE_ENV !== 'production') {
-            try {
-                const serverInfo = await mongoose.connection.db.admin().serverInfo();
-                console.log(`MongoDB version: ${serverInfo.version}`);
-            } catch (err) {
-                console.log(`MongoDB server info not available: ${err.message}`);
-            }
+        // Perform a quick ping to test the connection
+        try {
+            await mongoose.connection.db.admin().ping();
+            console.log('✅ MongoDB ping successful');
+        } catch (pingError) {
+            console.error('❌ MongoDB ping failed:', pingError.message);
         }
         
         // Drop the problematic index on the payments collection
@@ -109,31 +100,11 @@ const connectDB = async () => {
             }
         }
     } catch (error) {
-        isConnecting = false;
         console.error('MongoDB Atlas connection failed:', error.message);
-        
-        // Check if IP is in the whitelist
-        const ipCheckMsg = "Please ensure that the IP address of this server is whitelisted in MongoDB Atlas. " +
-                          "For Vercel deployments, set the MongoDB network access to 0.0.0.0/0 (allow from anywhere).";
-        console.error(ipCheckMsg);
         
         // Provide more detailed error messages based on error type
         if (error.name === 'MongoServerSelectionError') {
-            console.error('Could not connect to any MongoDB server. Please check:');
-            console.error('1. Your network connection');
-            console.error('2. MongoDB Atlas cluster status');
-            console.error('3. IP whitelist settings in MongoDB Atlas');
-
-            // Attempt to ping cloudinary to check general connectivity
-            try {
-                const cloudinary = require('cloudinary').v2;
-                const result = await cloudinary.api.ping();
-                console.log(`✅ Cloudinary ping successful: ${result.status}`);
-            } catch (cloudErr) {
-                console.log(`❌ Cloudinary ping failed: ${cloudErr.message}`);
-                console.log('This suggests a general connectivity issue, not specific to MongoDB');
-            }
-            
+            console.error('Could not connect to any servers in your MongoDB Atlas cluster. One common reason is that you\'re trying to access the database from an IP that isn\'t whitelisted. Make sure your current IP address is on your Atlas cluster\'s IP whitelist: https://www.mongodb.com/docs/atlas/security-whitelist/');
         } else if (error.name === 'MongoParseError') {
             console.error('Invalid MongoDB connection string. Please check your MONGO_URI in .env file.');
         } else if (error.name === 'MongoNetworkError') {
@@ -141,13 +112,14 @@ const connectDB = async () => {
         } else if (error.message.includes('Authentication failed')) {
             console.error('MongoDB authentication failed. Please check your username and password in the connection string.');
         }
+        
+        // Don't exit the process, just log the error and continue
     }
 };
 
 // Add a listener for MongoDB connection events
 mongoose.connection.on('connected', () => {
     console.log('MongoDB connection established');
-    connectionEstablished = true;
 });
 
 mongoose.connection.on('error', (err) => {
@@ -156,7 +128,6 @@ mongoose.connection.on('error', (err) => {
 
 mongoose.connection.on('disconnected', () => {
     console.warn('MongoDB connection disconnected');
-    connectionEstablished = false;
 });
 
 // Handle application termination

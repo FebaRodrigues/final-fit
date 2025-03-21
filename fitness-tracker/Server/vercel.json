@@ -6,27 +6,12 @@
       "use": "@vercel/node"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/debug",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/emergency-debug",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/generate-new-otp/(.*)",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.js"
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/index.js" },
+    { "source": "/debug", "destination": "/index.js" },
+    { "source": "/emergency-debug", "destination": "/index.js" },
+    { "source": "/generate-new-otp/(.*)", "destination": "/index.js" },
+    { "source": "/(.*)", "destination": "/index.js" }
   ],
   "env": {
     "NODE_ENV": "production"

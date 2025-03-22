@@ -3,7 +3,7 @@ const User = require('../models/User');
 const Appointment = require('../models/Appointment');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { uploadToCloudinary } = require('../utilities/imageUpload');
+const { uploadToCloudinary, uploadBufferToCloudinary } = require('../utilities/imageUpload');
 const { createWelcomeNotification } = require('./notificationController');
 const fs = require('fs');
 const path = require('path');
@@ -198,9 +198,29 @@ const updateUser = async (req, res) => {
             }
             
             try {
-                // Try to upload to Cloudinary with enhanced error handling
-                console.log('Attempting to upload image to Cloudinary...');
-                const cloudinaryResult = await uploadToCloudinary(req.file.path);
+                // Detect if we're in a serverless environment (Vercel)
+                const isServerless = process.env.VERCEL === '1';
+                let cloudinaryResult;
+                
+                if (isServerless) {
+                    // In serverless env, we use buffer-based upload
+                    console.log('Serverless environment detected, using buffer-based upload');
+                    
+                    if (!req.file.buffer) {
+                        console.error('Buffer not available in req.file');
+                        return res.status(500).json({ error: 'Server configuration error: Buffer not available' });
+                    }
+                    
+                    cloudinaryResult = await uploadBufferToCloudinary(
+                        req.file.buffer, 
+                        req.file.originalname
+                    );
+                } else {
+                    // In standard env, use the file path
+                    console.log('Using traditional file-based upload');
+                    cloudinaryResult = await uploadToCloudinary(req.file.path);
+                }
+                
                 console.log('Cloudinary upload successful:', cloudinaryResult);
                 
                 // Set both image and imageUrl in the request body for compatibility
@@ -227,11 +247,13 @@ const updateUser = async (req, res) => {
                     return res.status(500).json({ error: 'Failed to upload image, please try again later' });
                 }
             } finally {
-                // Always clean up the temporary file
-                fs.unlink(req.file.path, (err) => {
-                    if (err) console.error(`Failed to delete temporary file ${req.file.path}:`, err);
-                    else console.log(`Cleaned up temporary file: ${req.file.path}`);
-                });
+                // Clean up temporary file if it exists (for non-serverless environments)
+                if (!process.env.VERCEL && req.file.path) {
+                    fs.unlink(req.file.path, (err) => {
+                        if (err) console.error(`Failed to delete temporary file ${req.file.path}:`, err);
+                        else console.log(`Cleaned up temporary file: ${req.file.path}`);
+                    });
+                }
             }
         } else {
             console.log('No image received in the request');

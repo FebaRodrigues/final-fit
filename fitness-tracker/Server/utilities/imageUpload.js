@@ -32,6 +32,73 @@ cloudinary.api.ping()
   });
 
 /**
+ * Upload a buffer directly to Cloudinary (for serverless environments)
+ * @param {Buffer} fileBuffer The file buffer
+ * @param {string} originalFilename Original filename
+ * @returns {Promise<object>} Upload result with URL
+ */
+const uploadBufferToCloudinary = async (fileBuffer, originalFilename) => {
+    console.log("=== Starting Cloudinary buffer upload ===");
+    console.log("Original filename:", originalFilename);
+    console.log("Buffer size:", fileBuffer.length, "bytes");
+    
+    try {
+        // Verify Cloudinary configuration again before upload
+        console.log("Cloudinary upload using configuration:",
+                    cloudinary.config().cloud_name,
+                    cloudinary.config().api_key,
+                    cloudinary.config().api_secret ? "[SECRET SET]" : "[SECRET MISSING]");
+        
+        // Determine mime type from filename
+        const fileExt = originalFilename.substring(originalFilename.lastIndexOf('.')).toLowerCase();
+        const mimeType = fileExt === '.png' ? 'image/png' : 
+                        fileExt === '.gif' ? 'image/gif' : 
+                        'image/jpeg';
+        
+        console.log("Using mime type:", mimeType);
+        
+        // Convert buffer to base64 data URI
+        const base64Data = fileBuffer.toString('base64');
+        const dataUri = `data:${mimeType};base64,${base64Data}`;
+        
+        console.log(`Created data URI (length: ${dataUri.length} characters)`);
+        
+        // Upload options
+        const uploadOptions = {
+            folder: "fitnessApp",
+            resource_type: "auto",
+            timeout: 120000,
+            use_filename: true,
+            unique_filename: true
+        };
+        
+        console.log("Starting data URI upload to Cloudinary...");
+        const result = await new Promise((resolve, reject) => {
+            cloudinary.uploader.upload(dataUri, uploadOptions, (error, result) => {
+                if (error) {
+                    console.error("❌ Cloudinary upload error:", error);
+                    reject(error);
+                } else {
+                    console.log("✅ Cloudinary upload successful");
+                    resolve(result);
+                }
+            });
+        });
+        
+        console.log("Upload complete - secure_url:", result.secure_url);
+        return {
+            url: result.secure_url,
+            public_id: result.public_id,
+            version: result.version,
+            format: result.format
+        };
+    } catch (error) {
+        console.error("❌ CLOUDINARY ERROR:", error);
+        throw error;
+    }
+};
+
+/**
  * Upload an image to Cloudinary
  * @param {string} filePath Path to the image file
  * @returns {Promise<string>} URL of the uploaded image
@@ -39,6 +106,12 @@ cloudinary.api.ping()
 const uploadToCloudinary = async (filePath) => {
     console.log("=== Starting Cloudinary upload ===");
     console.log("File path:", filePath);
+    
+    // On Vercel, use buffer-based uploads instead
+    if (process.env.VERCEL === '1') {
+        console.error("Disk-based uploads not supported in serverless environments");
+        throw new Error("Disk-based uploads not supported in serverless environments");
+    }
     
     // Verify Cloudinary configuration again before upload
     console.log("Cloudinary upload using configuration:",
@@ -176,20 +249,11 @@ const uploadToCloudinary = async (filePath) => {
         };
         console.error("Full error details:", JSON.stringify(errorDetails, null, 2));
         
-        throw new Error(`Cloudinary upload failed: ${error.message}`);
-    } finally {
-        // Always clean up the temporary file
-        try {
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-                console.log(`✅ Temporary file deleted: ${filePath}`);
-            }
-        } catch (cleanupError) {
-            console.error(`Failed to delete temporary file: ${filePath}`, cleanupError);
-        }
+        throw error;
     }
 };
 
 module.exports = {
-    uploadToCloudinary
+    uploadToCloudinary,
+    uploadBufferToCloudinary
 };

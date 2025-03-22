@@ -32,21 +32,9 @@ try {
     console.error(`Upload directory is not writable: ${err.message}`);
 }
 
-// Configure storage for multer
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        // Create a secure filename with original extension
-        const fileExtension = path.extname(file.originalname).toLowerCase();
-        const randomName = crypto.randomBytes(16).toString('hex');
-        const sanitizedFilename = `${randomName}${fileExtension}`;
-        
-        console.log(`Generated secure filename: ${sanitizedFilename} for original file: ${file.originalname}`);
-        cb(null, sanitizedFilename);
-    }
-});
+// Use memory storage instead of disk storage for serverless environments
+const storage = multer.memoryStorage();
+console.log('Using multer memory storage for serverless compatibility');
 
 // File filter to accept only image files
 const fileFilter = (req, file, cb) => {
@@ -64,7 +52,7 @@ const fileFilter = (req, file, cb) => {
 
 // Configure multer
 const upload = multer({
-    storage: storage,
+    storage: storage, // memory storage for serverless compatibility
     fileFilter: fileFilter,
     limits: {
         fileSize: 5 * 1024 * 1024 // 5 MB limit

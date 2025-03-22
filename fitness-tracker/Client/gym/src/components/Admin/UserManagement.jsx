@@ -75,8 +75,12 @@ const UserManagement = () => {
       const admin = JSON.parse(adminData);
       
       // Make a request to refresh the token
-      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5050/api'}/admin/refresh-token`, {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'https://final-fit-backend.vercel.app/api'}/admin/refresh-token`, {
         adminId: admin._id
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
       });
       
       if (response.data && response.data.token) {
@@ -122,7 +126,7 @@ const UserManagement = () => {
       }
       
       // Make a direct API call with explicit headers to bypass interceptors
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5050/api'}/admin/users`, {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'https://final-fit-backend.vercel.app/api'}/admin/users`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -200,7 +204,7 @@ const UserManagement = () => {
       
       // Use a direct API call with explicit headers to bypass interceptors
       const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://final-fit-backend.vercel.app/api';
       
       // Try the admin endpoint first
       try {

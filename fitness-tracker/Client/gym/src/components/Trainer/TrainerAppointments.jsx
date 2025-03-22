@@ -146,9 +146,9 @@ const TrainerAppointments = () => {
               {filteredAppointments.map((appointment) => (
                 <TableRow key={appointment._id}>
                   <TableCell>
-                    {appointment.userId.name}
+                    {appointment.userId && appointment.userId.name ? appointment.userId.name : 'Unknown User'}
                     <Typography variant="body2" color="textSecondary">
-                      {appointment.userId.email}
+                      {appointment.userId && appointment.userId.email ? appointment.userId.email : 'No email'}
                     </Typography>
                   </TableCell>
                   <TableCell>{formatDate(appointment.date)}</TableCell>

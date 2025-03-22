@@ -240,9 +240,9 @@ const TrainerDashboard = () => {
                       <td>
                         <div className="client-info">
                           <div className="client-avatar">
-                            {appointment.userId.name.charAt(0)}
+                            {appointment.userId && appointment.userId.name ? appointment.userId.name.charAt(0) : 'U'}
                           </div>
-                          <span>{appointment.userId.name}</span>
+                          <span>{appointment.userId && appointment.userId.name ? appointment.userId.name : 'Unknown User'}</span>
                         </div>
                       </td>
                       <td>{formatDate(appointment.date)}</td>

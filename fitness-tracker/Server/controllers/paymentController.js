@@ -4,7 +4,23 @@ const User = require('../models/User');
 const Membership = require('../models/Membership');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
-const otpStore = new Map();
+const mongoose = require('mongoose');
+
+// Define OTPSession model at the top of the file after other imports
+const otpSessionSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  email: { type: String, required: true },
+  code: { type: String, required: true },
+  expires: { type: Date, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+let OTPSession;
+try {
+  OTPSession = mongoose.model('OTPSession');
+} catch (error) {
+  OTPSession = mongoose.model('OTPSession', otpSessionSchema);
+}
 
 // Initialize Stripe with proper error handling
 let stripe;
@@ -137,29 +153,27 @@ const sendPaymentOTP = async (req, res) => {
     const otp = generateOTP();
     console.log('Generated OTP:', otp, 'for user:', userId);
     
-    // Store OTP in session
-    req.session.otp = { 
-      code: otp, 
-      expires: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes expiry
-      userId 
-    };
+    // Store OTP in MongoDB instead of session
+    // First, delete any existing OTP sessions for this user
+    await OTPSession.deleteMany({ userId });
     
-    // Save session explicitly to ensure it's stored
-    req.session.save((err) => {
-      if (err) {
-        console.error('Error saving session:', err);
-        return res.status(500).json({ message: 'Failed to save OTP session' });
-      }
-      
-      console.log('OTP session saved:', req.session.otp);
+    // Create new OTP session
+    const otpSession = new OTPSession({
+      userId,
+      email: emailToUse,
+      code: otp,
+      expires: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes expiry
     });
-
+    
+    await otpSession.save();
+    console.log('OTP session saved to database:', otpSession);
+    
     // Send OTP via email
     await sendOTP(emailToUse, otp);
     
     return res.status(200).json({ 
       message: 'OTP sent successfully',
-      expiresAt: req.session.otp.expires
+      expiresAt: otpSession.expires
     });
   } catch (error) {
     console.error('Error sending OTP:', error);
@@ -178,35 +192,32 @@ const verifyPaymentOTP = async (req, res) => {
       return res.status(400).json({ message: 'OTP and userId are required' });
     }
 
+    // Find OTP session in database
+    const otpSession = await OTPSession.findOne({ userId }).sort({ createdAt: -1 });
+    
     // Check if OTP session exists
-    if (!req.session?.otp) {
+    if (!otpSession) {
       return res.status(400).json({ message: 'No OTP session found' });
     }
     
-    console.log('Session OTP data:', req.session.otp);
-    
-    if (req.session.otp.userId !== userId) {
-      return res.status(400).json({ message: 'OTP session user mismatch' });
-    }
-
-    const { code, expires } = req.session.otp;
+    console.log('Database OTP data:', otpSession);
     
     // Check if OTP is expired
-    if (new Date() > new Date(expires)) {
-      delete req.session.otp;
+    if (new Date() > new Date(otpSession.expires)) {
+      await OTPSession.deleteOne({ _id: otpSession._id });
       return res.status(400).json({ message: 'OTP expired' });
     }
 
     // Validate OTP
     const otpString = otp.toString();
-    console.log('Comparing OTPs:', { sessionOTP: code, providedOTP: otpString });
+    console.log('Comparing OTPs:', { dbOTP: otpSession.code, providedOTP: otpString });
     
-    if (code !== otpString) {
+    if (otpSession.code !== otpString) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
 
-    // Clear OTP session
-    delete req.session.otp;
+    // Delete OTP session
+    await OTPSession.deleteOne({ _id: otpSession._id });
 
     // Find any pending membership for this user
     const pendingMembership = await Membership.findOne({ 

@@ -19,7 +19,8 @@ const formatImageUrl = (imageUrl) => {
   
   // If it's a relative path starting with /uploads, convert to server URL
   if (imageUrl.startsWith('/uploads/')) {
-    return `http://localhost:5050${imageUrl}?t=${timestamp}`;
+    const API_BASE = import.meta.env.VITE_SERVER_URL || 'https://final-fit-backend.vercel.app';
+    return `${API_BASE}${imageUrl}?t=${timestamp}`;
   }
   
   // Otherwise return as is with timestamp

@@ -477,7 +477,8 @@ const Payments = () => {
           const token = localStorage.getItem('token');
           
           // Try fetch API directly
-          const fetchResponse = await fetch('http://localhost:5050/api/payments', {
+          const API_URL = import.meta.env.VITE_API_URL || 'https://final-fit-backend.vercel.app/api';
+          const fetchResponse = await fetch(`${API_URL}/payments`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

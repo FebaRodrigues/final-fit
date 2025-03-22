@@ -302,30 +302,51 @@ const UserProfile = () => {
                 });
                 
                 try {
-                    // Simple PUT request with FormData
-                    console.log("Making API request to upload image...");
-                    
                     // Use the axios instance directly for better control
                     const token = localStorage.getItem('token');
                     const API_URL = import.meta.env.VITE_API_URL || 'https://final-fit-backend.vercel.app/api';
                     console.log("Using API URL for image upload:", API_URL);
                     
-                    const response = await axios.put(`${API_URL}/users/profile`, dataToUpdate, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                            // Don't set Content-Type for FormData - browser will set it with boundary
-                        },
-                        timeout: 180000 // 3 minutes timeout
-                    });
-                    
-                    // Close the loading toast
-                    toast.dismiss(toastId);
-                    
-                    console.log("API response received:", response.status);
-                    console.log("Profile update response:", response.data);
-                    
-                    // Process the response and update the UI
-                    handleUpdateSuccess(response.data);
+                    // Double-check we're not using localhost
+                    if (API_URL.includes('localhost')) {
+                        console.warn("WARNING: Using localhost for API which won't work in production. Overriding with production URL.");
+                        const prodApiUrl = 'https://final-fit-backend.vercel.app/api';
+                        console.log("Using production API URL instead:", prodApiUrl);
+                        
+                        const response = await axios.put(`${prodApiUrl}/users/profile`, dataToUpdate, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                                // Don't set Content-Type for FormData - browser will set it with boundary
+                            },
+                            timeout: 180000 // 3 minutes timeout
+                        });
+                        
+                        // Close the loading toast
+                        toast.dismiss(toastId);
+                        
+                        console.log("API response received:", response.status);
+                        console.log("Profile update response:", response.data);
+                        
+                        // Process the response and update the UI
+                        handleUpdateSuccess(response.data);
+                    } else {
+                        const response = await axios.put(`${API_URL}/users/profile`, dataToUpdate, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                                // Don't set Content-Type for FormData - browser will set it with boundary
+                            },
+                            timeout: 180000 // 3 minutes timeout
+                        });
+                        
+                        // Close the loading toast
+                        toast.dismiss(toastId);
+                        
+                        console.log("API response received:", response.status);
+                        console.log("Profile update response:", response.data);
+                        
+                        // Process the response and update the UI
+                        handleUpdateSuccess(response.data);
+                    }
                 } catch (uploadError) {
                     // Close the loading toast
                     toast.dismiss(toastId);

@@ -307,7 +307,10 @@ const UserProfile = () => {
                     
                     // Use the axios instance directly for better control
                     const token = localStorage.getItem('token');
-                    const response = await axios.put('http://localhost:5050/api/users/profile', dataToUpdate, {
+                    const API_URL = import.meta.env.VITE_API_URL || 'https://final-fit-backend.vercel.app/api';
+                    console.log("Using API URL for image upload:", API_URL);
+                    
+                    const response = await axios.put(`${API_URL}/users/profile`, dataToUpdate, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                             // Don't set Content-Type for FormData - browser will set it with boundary
